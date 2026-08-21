@@ -1,0 +1,30 @@
+import { Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import VehicleListPage from './pages/VehicleListPage'
+import VehicleFormPage from './pages/VehicleFormPage'
+import VehicleDetailPage from './pages/VehicleDetailPage'
+import MaintenanceFormPage from './pages/MaintenanceFormPage'
+import FuelFormPage from './pages/FuelFormPage'
+import DeadlineFormPage from './pages/DeadlineFormPage'
+import RemindersPage from './pages/RemindersPage'
+import SettingsPage from './pages/SettingsPage'
+
+function App() {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<VehicleListPage />} />
+        <Route path="/vehicles/new" element={<VehicleFormPage />} />
+        <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
+        <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
+        <Route path="/vehicles/:id/maintenance/new" element={<MaintenanceFormPage />} />
+        <Route path="/vehicles/:id/fuel/new" element={<FuelFormPage />} />
+        <Route path="/vehicles/:id/deadline/new" element={<DeadlineFormPage />} />
+        <Route path="/reminders" element={<RemindersPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+    </Routes>
+  )
+}
+
+export default App
