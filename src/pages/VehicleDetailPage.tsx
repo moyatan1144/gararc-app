@@ -47,8 +47,10 @@ export default function VehicleDetailPage() {
     try {
       const result = await shareVehicle(vehicle)
       setShareStatus(result === 'copied' ? 'コピーしました' : null)
-    } catch {
-      // ユーザーが共有をキャンセルした場合など
+    } catch (err) {
+      // 共有シートのキャンセルは正常操作なので無視する
+      if (err instanceof Error && err.name === 'AbortError') return
+      setShareStatus('共有に失敗しました')
     }
   }
 

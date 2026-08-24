@@ -42,7 +42,7 @@ export default function RemindersPage() {
           return (
             <li key={i}>
               <Link
-                to={`/vehicles/${reminder.vehicleId}`}
+                to={`/vehicles/${reminder.vehicleId}?tab=${reminder.kind === 'deadline' ? 'deadline' : 'maintenance'}`}
                 className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
               >
                 <div className="flex justify-between">
