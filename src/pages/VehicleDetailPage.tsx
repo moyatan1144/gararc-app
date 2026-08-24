@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
@@ -7,11 +7,18 @@ import { shareVehicle } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
 type Tab = 'maintenance' | 'fuel' | 'deadline'
+const TABS: Tab[] = ['maintenance', 'fuel', 'deadline']
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [tab, setTab] = useState<Tab>('maintenance')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'maintenance'
   const [shareStatus, setShareStatus] = useState<string | null>(null)
+
+  function setTab(next: Tab) {
+    setSearchParams({ tab: next }, { replace: true })
+  }
 
   const vehicle = useLiveQuery(() => (id ? db.vehicles.get(id) : undefined), [id])
   const maintenanceRecords = useLiveQuery(
@@ -104,9 +111,17 @@ export default function VehicleDetailPage() {
           <ul className="flex flex-col gap-2">
             {maintenanceRecords?.map((r) => (
               <li key={r.id} className="card">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="font-medium">{r.title}</span>
-                  <span className="text-sm text-slate-500">{r.date}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500">{r.date}</span>
+                    <Link
+                      to={`/vehicles/${id}/maintenance/${r.id}/edit`}
+                      className="text-sky-600 text-sm"
+                    >
+                      編集
+                    </Link>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-500">
                   {r.category}
@@ -175,11 +190,19 @@ export default function VehicleDetailPage() {
           <ul className="flex flex-col gap-2">
             {deadlines?.map((d) => (
               <li key={d.id} className="card">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="font-medium">
                     {d.type} ・ {d.label}
                   </span>
-                  <span className="text-sm text-slate-500">{d.dueDate}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500">{d.dueDate}</span>
+                    <Link
+                      to={`/vehicles/${id}/deadline/${d.id}/edit`}
+                      className="text-sky-600 text-sm"
+                    >
+                      編集
+                    </Link>
+                  </div>
                 </div>
               </li>
             ))}

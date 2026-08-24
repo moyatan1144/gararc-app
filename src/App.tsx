@@ -18,9 +18,14 @@ function App() {
         <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
         <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
         <Route path="/vehicles/:id/maintenance/new" element={<MaintenanceFormPage />} />
+        <Route
+          path="/vehicles/:id/maintenance/:recordId/edit"
+          element={<MaintenanceFormPage />}
+        />
         <Route path="/vehicles/:id/fuel/new" element={<FuelFormPage />} />
         <Route path="/vehicles/:id/fuel/:fuelId/edit" element={<FuelFormPage />} />
         <Route path="/vehicles/:id/deadline/new" element={<DeadlineFormPage />} />
+        <Route path="/vehicles/:id/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
         <Route path="/reminders" element={<RemindersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

@@ -45,7 +45,7 @@ export default function FuelFormPage() {
     setOdometer(String(vehicle.currentOdometer))
   }
 
-  const backTo = `/vehicles/${vehicleId}`
+  const backTo = `/vehicles/${vehicleId}?tab=fuel`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()

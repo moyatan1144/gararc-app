@@ -6,11 +6,16 @@ import { MAINTENANCE_CATEGORIES } from '../types'
 import BackHeader from '../components/BackHeader'
 
 export default function MaintenanceFormPage() {
-  const { id: vehicleId } = useParams<{ id: string }>()
+  const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
+  const isEdit = Boolean(recordId)
   const navigate = useNavigate()
   const vehicle = useLiveQuery(
     () => (vehicleId ? db.vehicles.get(vehicleId) : undefined),
     [vehicleId],
+  )
+  const existing = useLiveQuery(
+    () => (recordId ? db.maintenanceRecords.get(recordId) : undefined),
+    [recordId],
   )
 
   const [category, setCategory] = useState<string>(MAINTENANCE_CATEGORIES[0])
@@ -22,32 +27,58 @@ export default function MaintenanceFormPage() {
   const [memo, setMemo] = useState('')
   const [intervalKm, setIntervalKm] = useState('')
   const [intervalMonths, setIntervalMonths] = useState('')
+  const [loaded, setLoaded] = useState(!isEdit)
 
-  if (vehicle && odometer === '') {
+  if (isEdit && existing && !loaded) {
+    setCategory(existing.category)
+    setTitle(existing.title === existing.category ? '' : existing.title)
+    setBrand(existing.brand ?? '')
+    setDate(existing.date)
+    setOdometer(String(existing.odometer))
+    setCost(existing.cost !== undefined ? String(existing.cost) : '')
+    setMemo(existing.memo ?? '')
+    setIntervalKm(existing.intervalKm !== undefined ? String(existing.intervalKm) : '')
+    setIntervalMonths(
+      existing.intervalMonths !== undefined ? String(existing.intervalMonths) : '',
+    )
+    setLoaded(true)
+  }
+
+  if (!isEdit && vehicle && odometer === '') {
     // 初期値として現在の走行距離を提案
     setOdometer(String(vehicle.currentOdometer))
   }
+
+  const backTo = `/vehicles/${vehicleId}?tab=maintenance`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!vehicleId) return
     const odometerNum = Number(odometer) || 0
 
+    const fields = {
+      category,
+      title: title || category,
+      brand: brand || undefined,
+      date,
+      odometer: odometerNum,
+      cost: cost ? Number(cost) : undefined,
+      memo: memo || undefined,
+      intervalKm: intervalKm ? Number(intervalKm) : undefined,
+      intervalMonths: intervalMonths ? Number(intervalMonths) : undefined,
+    }
+
     await db.transaction('rw', db.maintenanceRecords, db.vehicles, async () => {
-      await db.maintenanceRecords.add({
-        id: newId(),
-        vehicleId,
-        category,
-        title: title || category,
-        brand: brand || undefined,
-        date,
-        odometer: odometerNum,
-        cost: cost ? Number(cost) : undefined,
-        memo: memo || undefined,
-        intervalKm: intervalKm ? Number(intervalKm) : undefined,
-        intervalMonths: intervalMonths ? Number(intervalMonths) : undefined,
-        createdAt: nowIso(),
-      })
+      if (isEdit && recordId) {
+        await db.maintenanceRecords.update(recordId, fields)
+      } else {
+        await db.maintenanceRecords.add({
+          id: newId(),
+          vehicleId,
+          ...fields,
+          createdAt: nowIso(),
+        })
+      }
       if (vehicle && odometerNum > vehicle.currentOdometer) {
         await db.vehicles.update(vehicleId, {
           currentOdometer: odometerNum,
@@ -56,12 +87,19 @@ export default function MaintenanceFormPage() {
       }
     })
 
-    navigate(`/vehicles/${vehicleId}`)
+    navigate(backTo)
+  }
+
+  async function handleDelete() {
+    if (!recordId) return
+    if (!confirm('この整備記録を削除します。よろしいですか？')) return
+    await db.maintenanceRecords.delete(recordId)
+    navigate(backTo)
   }
 
   return (
     <div className="p-4">
-      <BackHeader title="整備記録を追加" to={`/vehicles/${vehicleId}`} />
+      <BackHeader title={isEdit ? '整備記録を編集' : '整備記録を追加'} to={backTo} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="カテゴリ">
           <select
@@ -158,8 +196,14 @@ export default function MaintenanceFormPage() {
         </div>
 
         <button type="submit" className="btn-primary mt-2">
-          記録する
+          {isEdit ? '更新する' : '記録する'}
         </button>
+
+        {isEdit && (
+          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
+            この整備記録を削除する
+          </button>
+        )}
       </form>
     </div>
   )

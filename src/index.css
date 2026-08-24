@@ -9,6 +9,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 数値入力のスピンボタンを全体で非表示にする */
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 @layer components {
   .input {
     @apply rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-base outline-none focus:border-sky-500;

@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import type { DeadlineType } from '../types'
 import BackHeader from '../components/BackHeader'
@@ -7,34 +8,60 @@ import BackHeader from '../components/BackHeader'
 const TYPES: DeadlineType[] = ['車検', '任意保険', '自賠責保険', 'その他']
 
 export default function DeadlineFormPage() {
-  const { id: vehicleId } = useParams<{ id: string }>()
+  const { id: vehicleId, deadlineId } = useParams<{ id: string; deadlineId?: string }>()
+  const isEdit = Boolean(deadlineId)
   const navigate = useNavigate()
+  const existing = useLiveQuery(
+    () => (deadlineId ? db.deadlines.get(deadlineId) : undefined),
+    [deadlineId],
+  )
 
   const [type, setType] = useState<DeadlineType>('車検')
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [notifyBeforeDays, setNotifyBeforeDays] = useState('30')
+  const [loaded, setLoaded] = useState(!isEdit)
+
+  if (isEdit && existing && !loaded) {
+    setType(existing.type)
+    setLabel(existing.label === existing.type ? '' : existing.label)
+    setDueDate(existing.dueDate)
+    setNotifyBeforeDays(String(existing.notifyBeforeDays))
+    setLoaded(true)
+  }
+
+  const backTo = `/vehicles/${vehicleId}?tab=deadline`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!vehicleId) return
 
-    await db.deadlines.add({
-      id: newId(),
-      vehicleId,
+    const fields = {
       type,
       label: label || type,
       dueDate,
       notifyBeforeDays: Number(notifyBeforeDays) || 30,
-      createdAt: nowIso(),
-    })
+    }
 
-    navigate(`/vehicles/${vehicleId}`)
+    if (isEdit && deadlineId) {
+      await db.deadlines.update(deadlineId, fields)
+    } else {
+      await db.deadlines.add({ id: newId(), vehicleId, ...fields, createdAt: nowIso() })
+    }
+
+    navigate(backTo)
+  }
+
+  async function handleDelete() {
+    if (!deadlineId) return
+    if (!confirm('この期限を削除します。よろしいですか？')) return
+    await db.deadlines.delete(deadlineId)
+    navigate(backTo)
   }
 
   return (
     <div className="p-4">
-      <BackHeader title="期限を追加" to={`/vehicles/${vehicleId}`} />
+      <BackHeader title={isEdit ? '期限を編集' : '期限を追加'} to={backTo} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="種類">
           <select
@@ -77,8 +104,14 @@ export default function DeadlineFormPage() {
         </Field>
 
         <button type="submit" className="btn-primary mt-2">
-          記録する
+          {isEdit ? '更新する' : '記録する'}
         </button>
+
+        {isEdit && (
+          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
+            この期限を削除する
+          </button>
+        )}
       </form>
     </div>
   )
