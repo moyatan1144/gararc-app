@@ -2,6 +2,8 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
+import type { MeterType } from '../types'
+import BackHeader from '../components/BackHeader'
 
 export default function FuelFormPage() {
   const { id: vehicleId } = useParams<{ id: string }>()
@@ -12,27 +14,35 @@ export default function FuelFormPage() {
   )
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [meterType, setMeterType] = useState<MeterType>('odometer')
   const [odometer, setOdometer] = useState('')
+  const [tripDistance, setTripDistance] = useState('')
   const [liters, setLiters] = useState('')
   const [pricePerLiter, setPricePerLiter] = useState('')
   const [isFull, setIsFull] = useState(true)
   const [memo, setMemo] = useState('')
 
-  if (vehicle && odometer === '') {
+  if (vehicle && odometer === '' && meterType === 'odometer') {
     setOdometer(String(vehicle.currentOdometer))
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!vehicleId) return
-    const odometerNum = Number(odometer) || 0
+
+    const referenceOdometer = vehicle?.currentOdometer ?? 0
+    const tripNum = Number(tripDistance) || 0
+    const odometerNum =
+      meterType === 'trip' ? referenceOdometer + tripNum : Number(odometer) || 0
 
     await db.transaction('rw', db.fuelRecords, db.vehicles, async () => {
       await db.fuelRecords.add({
         id: newId(),
         vehicleId,
         date,
+        meterType,
         odometer: odometerNum,
+        tripDistance: meterType === 'trip' ? tripNum : undefined,
         liters: Number(liters) || 0,
         pricePerLiter: Number(pricePerLiter) || 0,
         isFull,
@@ -55,7 +65,7 @@ export default function FuelFormPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">給油記録を追加</h1>
+      <BackHeader title="給油記録を追加" />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="給油日">
           <input
@@ -66,16 +76,66 @@ export default function FuelFormPage() {
             className="input"
           />
         </Field>
-        <Field label="走行距離 (km)">
-          <input
-            required
-            type="number"
-            inputMode="numeric"
-            value={odometer}
-            onChange={(e) => setOdometer(e.target.value)}
-            className="input"
-          />
+
+        <Field label="距離の入力方法">
+          <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 text-sm">
+            <button
+              type="button"
+              onClick={() => setMeterType('odometer')}
+              className={`flex-1 py-2 ${
+                meterType === 'odometer'
+                  ? 'bg-sky-600 text-white font-medium'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              オドメーター（総走行距離）
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeterType('trip')}
+              className={`flex-1 py-2 ${
+                meterType === 'trip'
+                  ? 'bg-sky-600 text-white font-medium'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              トリップメーター（前回給油からの距離）
+            </button>
+          </div>
         </Field>
+
+        {meterType === 'odometer' ? (
+          <Field label="走行距離 (km)">
+            <input
+              required
+              type="number"
+              inputMode="numeric"
+              value={odometer}
+              onChange={(e) => setOdometer(e.target.value)}
+              className="input"
+            />
+          </Field>
+        ) : (
+          <Field label="トリップメーターの値 (km)">
+            <input
+              required
+              type="number"
+              step="0.1"
+              inputMode="decimal"
+              value={tripDistance}
+              onChange={(e) => setTripDistance(e.target.value)}
+              className="input"
+              placeholder="前回の給油からの走行距離"
+            />
+            <span className="text-xs text-slate-500">
+              総走行距離: {(
+                (vehicle?.currentOdometer ?? 0) + (Number(tripDistance) || 0)
+              ).toLocaleString()}{' '}
+              km
+            </span>
+          </Field>
+        )}
+
         <div className="flex gap-3">
           <Field label="給油量 (L)">
             <input

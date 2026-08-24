@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { MAINTENANCE_CATEGORIES } from '../types'
+import BackHeader from '../components/BackHeader'
 
 export default function MaintenanceFormPage() {
   const { id: vehicleId } = useParams<{ id: string }>()
@@ -14,6 +15,7 @@ export default function MaintenanceFormPage() {
 
   const [category, setCategory] = useState<string>(MAINTENANCE_CATEGORIES[0])
   const [title, setTitle] = useState('')
+  const [brand, setBrand] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [odometer, setOdometer] = useState('')
   const [cost, setCost] = useState('')
@@ -37,6 +39,7 @@ export default function MaintenanceFormPage() {
         vehicleId,
         category,
         title: title || category,
+        brand: brand || undefined,
         date,
         odometer: odometerNum,
         cost: cost ? Number(cost) : undefined,
@@ -58,7 +61,7 @@ export default function MaintenanceFormPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">整備記録を追加</h1>
+      <BackHeader title="整備記録を追加" />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="カテゴリ">
           <select
@@ -79,6 +82,14 @@ export default function MaintenanceFormPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="input"
             placeholder="例: フロントタイヤ交換"
+          />
+        </Field>
+        <Field label="メーカー・ブランド（任意）">
+          <input
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            className="input"
+            placeholder="例: MICHELIN"
           />
         </Field>
         <Field label="作業日">

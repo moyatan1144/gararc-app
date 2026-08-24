@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { db, newId, nowIso } from '../db'
 import type { DeadlineType } from '../types'
+import BackHeader from '../components/BackHeader'
 
 const TYPES: DeadlineType[] = ['車検', '任意保険', '自賠責保険', 'その他']
 
@@ -33,7 +34,7 @@ export default function DeadlineFormPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">期限を追加</h1>
+      <BackHeader title="期限を追加" />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="種類">
           <select

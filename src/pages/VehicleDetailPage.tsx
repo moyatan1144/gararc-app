@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
+import { shareVehicle } from '../lib/share'
+import BackHeader from '../components/BackHeader'
 
 type Tab = 'maintenance' | 'fuel' | 'deadline'
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [tab, setTab] = useState<Tab>('maintenance')
+  const [shareStatus, setShareStatus] = useState<string | null>(null)
 
   const vehicle = useLiveQuery(() => (id ? db.vehicles.get(id) : undefined), [id])
   const maintenanceRecords = useLiveQuery(
@@ -32,20 +35,53 @@ export default function VehicleDetailPage() {
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
 
+  async function handleShare() {
+    if (!vehicle) return
+    try {
+      const result = await shareVehicle(vehicle)
+      setShareStatus(result === 'copied' ? 'コピーしました' : null)
+    } catch {
+      // ユーザーが共有をキャンセルした場合など
+    }
+  }
+
   return (
     <div className="p-4">
-      <header className="mb-4 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold">{vehicle.name}</h1>
-          {vehicle.model && <div className="text-sm text-slate-500">{vehicle.model}</div>}
-          <div className="text-sm text-slate-500">
-            走行距離: {vehicle.currentOdometer.toLocaleString()} km
+      <BackHeader title={vehicle.name} />
+
+      <div className="card mb-4 flex gap-3">
+        {vehicle.photoDataUrl && (
+          <img
+            src={vehicle.photoDataUrl}
+            alt=""
+            className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-800 flex-shrink-0"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div className="text-sm text-slate-500">
+              {[vehicle.manufacturer, vehicle.model].filter(Boolean).join(' ') || '車種未設定'}
+              {vehicle.displacementCc ? ` ・ ${vehicle.displacementCc}cc` : ''}
+              {vehicle.modelYear ? ` ・ ${vehicle.modelYear}年` : ''}
+            </div>
+            <Link to={`/vehicles/${id}/edit`} className="text-sky-600 text-sm flex-shrink-0">
+              編集
+            </Link>
           </div>
+          <div className="text-sm text-slate-500 mt-1">
+            走行距離: {vehicle.currentOdometer.toLocaleString()} km
+            {vehicle.purchaseOdometer !== undefined &&
+              `（購入時 ${vehicle.purchaseOdometer.toLocaleString()} km）`}
+          </div>
+          {vehicle.specNotes && (
+            <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
+          )}
+          <button onClick={handleShare} className="text-sky-600 text-sm mt-2">
+            🔗 車両情報を共有
+          </button>
+          {shareStatus && <span className="text-xs text-slate-500 ml-2">{shareStatus}</span>}
         </div>
-        <Link to={`/vehicles/${id}/edit`} className="text-sky-600 text-sm">
-          編集
-        </Link>
-      </header>
+      </div>
 
       <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 mb-4 text-sm">
         <TabButton active={tab === 'maintenance'} onClick={() => setTab('maintenance')}>
@@ -72,7 +108,10 @@ export default function VehicleDetailPage() {
                   <span className="font-medium">{r.title}</span>
                   <span className="text-sm text-slate-500">{r.date}</span>
                 </div>
-                <div className="text-sm text-slate-500">{r.category}</div>
+                <div className="text-sm text-slate-500">
+                  {r.category}
+                  {r.brand && ` ・ ${r.brand}`}
+                </div>
                 <div className="text-sm text-slate-500">
                   {r.odometer.toLocaleString()} km
                   {r.cost !== undefined && ` ・ ¥${r.cost.toLocaleString()}`}
@@ -103,7 +142,9 @@ export default function VehicleDetailPage() {
                   <span className="text-sm text-slate-500">{record.date}</span>
                 </div>
                 <div className="text-sm text-slate-500">
-                  {record.odometer.toLocaleString()} km
+                  {record.meterType === 'trip'
+                    ? `トリップ ${record.tripDistance?.toLocaleString()} km（総走行 ${record.odometer.toLocaleString()} km）`
+                    : `${record.odometer.toLocaleString()} km`}
                   {!record.isFull && ' （満タンでない）'}
                 </div>
                 {kmPerLiter !== undefined && (

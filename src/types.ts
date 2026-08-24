@@ -2,8 +2,13 @@ export interface Vehicle {
   id: string
   name: string
   model?: string
+  manufacturer?: string
+  displacementCc?: number
+  modelYear?: number
   plateNumber?: string
   currentOdometer: number
+  purchaseOdometer?: number
+  specNotes?: string
   photoDataUrl?: string
   createdAt: string
   updatedAt: string
@@ -14,6 +19,7 @@ export interface MaintenanceRecord {
   vehicleId: string
   category: string
   title: string
+  brand?: string
   date: string
   odometer: number
   cost?: number
@@ -23,11 +29,15 @@ export interface MaintenanceRecord {
   createdAt: string
 }
 
+export type MeterType = 'odometer' | 'trip'
+
 export interface FuelRecord {
   id: string
   vehicleId: string
   date: string
+  meterType: MeterType
   odometer: number
+  tripDistance?: number
   liters: number
   pricePerLiter: number
   isFull: boolean

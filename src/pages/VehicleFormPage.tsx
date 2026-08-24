@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
+import { readImageAsDataUrl } from '../lib/image'
+import BackHeader from '../components/BackHeader'
 
 export default function VehicleFormPage() {
   const { id } = useParams()
@@ -14,39 +16,64 @@ export default function VehicleFormPage() {
 
   const [name, setName] = useState('')
   const [model, setModel] = useState('')
+  const [manufacturer, setManufacturer] = useState('')
+  const [displacementCc, setDisplacementCc] = useState('')
+  const [modelYear, setModelYear] = useState('')
   const [plateNumber, setPlateNumber] = useState('')
   const [currentOdometer, setCurrentOdometer] = useState('0')
+  const [purchaseOdometer, setPurchaseOdometer] = useState('')
+  const [specNotes, setSpecNotes] = useState('')
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | undefined>(undefined)
   const [loaded, setLoaded] = useState(!isEdit)
 
   if (isEdit && existing && !loaded) {
     setName(existing.name)
     setModel(existing.model ?? '')
+    setManufacturer(existing.manufacturer ?? '')
+    setDisplacementCc(existing.displacementCc !== undefined ? String(existing.displacementCc) : '')
+    setModelYear(existing.modelYear !== undefined ? String(existing.modelYear) : '')
     setPlateNumber(existing.plateNumber ?? '')
     setCurrentOdometer(String(existing.currentOdometer))
+    setPurchaseOdometer(
+      existing.purchaseOdometer !== undefined ? String(existing.purchaseOdometer) : '',
+    )
+    setSpecNotes(existing.specNotes ?? '')
+    setPhotoDataUrl(existing.photoDataUrl)
     setLoaded(true)
+  }
+
+  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const dataUrl = await readImageAsDataUrl(file)
+    setPhotoDataUrl(dataUrl)
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const now = nowIso()
 
+    const fields = {
+      name,
+      model: model || undefined,
+      manufacturer: manufacturer || undefined,
+      displacementCc: displacementCc ? Number(displacementCc) : undefined,
+      modelYear: modelYear ? Number(modelYear) : undefined,
+      plateNumber: plateNumber || undefined,
+      currentOdometer: Number(currentOdometer) || 0,
+      purchaseOdometer: purchaseOdometer ? Number(purchaseOdometer) : undefined,
+      specNotes: specNotes || undefined,
+      photoDataUrl,
+    }
+
     if (isEdit && id) {
-      await db.vehicles.update(id, {
-        name,
-        model: model || undefined,
-        plateNumber: plateNumber || undefined,
-        currentOdometer: Number(currentOdometer) || 0,
-        updatedAt: now,
-      })
+      await db.vehicles.update(id, { ...fields, updatedAt: now })
       navigate(`/vehicles/${id}`)
     } else {
       const vehicleId = newId()
       await db.vehicles.add({
         id: vehicleId,
-        name,
-        model: model || undefined,
-        plateNumber: plateNumber || undefined,
-        currentOdometer: Number(currentOdometer) || 0,
+        ...fields,
         createdAt: now,
         updatedAt: now,
       })
@@ -68,8 +95,20 @@ export default function VehicleFormPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">{isEdit ? '車両を編集' : '車両を追加'}</h1>
+      <BackHeader title={isEdit ? '車両を編集' : '車両を追加'} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="車体の写真（任意）">
+          <div className="flex items-center gap-3">
+            {photoDataUrl && (
+              <img
+                src={photoDataUrl}
+                alt=""
+                className="w-16 h-16 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
+              />
+            )}
+            <input type="file" accept="image/*" onChange={handlePhotoChange} className="text-sm" />
+          </div>
+        </Field>
         <Field label="車両名（例: マイCB400）">
           <input
             required
@@ -79,14 +118,45 @@ export default function VehicleFormPage() {
             placeholder="愛車の呼び名"
           />
         </Field>
-        <Field label="車種（任意）">
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="input"
-            placeholder="例: Honda CB400SF"
-          />
-        </Field>
+        <div className="flex gap-3">
+          <Field label="メーカー（任意）">
+            <input
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              className="input"
+              placeholder="例: Honda"
+            />
+          </Field>
+          <Field label="車種（任意）">
+            <input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="input"
+              placeholder="例: CB400SF"
+            />
+          </Field>
+        </div>
+        <div className="flex gap-3">
+          <Field label="排気量 (cc・任意)">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={displacementCc}
+              onChange={(e) => setDisplacementCc(e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="年式（任意）">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={modelYear}
+              onChange={(e) => setModelYear(e.target.value)}
+              className="input"
+              placeholder="例: 2015"
+            />
+          </Field>
+        </div>
         <Field label="ナンバー（任意）">
           <input
             value={plateNumber}
@@ -94,14 +164,34 @@ export default function VehicleFormPage() {
             className="input"
           />
         </Field>
-        <Field label="現在の走行距離 (km)">
-          <input
-            required
-            type="number"
-            inputMode="numeric"
-            value={currentOdometer}
-            onChange={(e) => setCurrentOdometer(e.target.value)}
+        <div className="flex gap-3">
+          <Field label="現在の走行距離 (km)">
+            <input
+              required
+              type="number"
+              inputMode="numeric"
+              value={currentOdometer}
+              onChange={(e) => setCurrentOdometer(e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="購入時の走行距離 (km・任意)">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={purchaseOdometer}
+              onChange={(e) => setPurchaseOdometer(e.target.value)}
+              className="input"
+            />
+          </Field>
+        </div>
+        <Field label="仕様・カスタム内容など（任意）">
+          <textarea
+            value={specNotes}
+            onChange={(e) => setSpecNotes(e.target.value)}
             className="input"
+            rows={4}
+            placeholder="例: マフラー: 〇〇製に交換、その他自由にメモ"
           />
         </Field>
 
@@ -125,7 +215,7 @@ export default function VehicleFormPage() {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-sm flex-1">
       <span className="text-slate-600 dark:text-slate-400">{label}</span>
       {children}
     </label>
