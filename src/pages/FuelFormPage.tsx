@@ -4,13 +4,19 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import type { MeterType } from '../types'
 import BackHeader from '../components/BackHeader'
+import DecimalInput from '../components/DecimalInput'
 
 export default function FuelFormPage() {
-  const { id: vehicleId } = useParams<{ id: string }>()
+  const { id: vehicleId, fuelId } = useParams<{ id: string; fuelId?: string }>()
+  const isEdit = Boolean(fuelId)
   const navigate = useNavigate()
   const vehicle = useLiveQuery(
     () => (vehicleId ? db.vehicles.get(vehicleId) : undefined),
     [vehicleId],
+  )
+  const existing = useLiveQuery(
+    () => (fuelId ? db.fuelRecords.get(fuelId) : undefined),
+    [fuelId],
   )
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -21,10 +27,25 @@ export default function FuelFormPage() {
   const [pricePerLiter, setPricePerLiter] = useState('')
   const [isFull, setIsFull] = useState(true)
   const [memo, setMemo] = useState('')
+  const [loaded, setLoaded] = useState(!isEdit)
 
-  if (vehicle && odometer === '' && meterType === 'odometer') {
+  if (isEdit && existing && !loaded) {
+    setDate(existing.date)
+    setMeterType(existing.meterType)
+    setOdometer(String(existing.odometer))
+    setTripDistance(existing.tripDistance !== undefined ? String(existing.tripDistance) : '')
+    setLiters(String(existing.liters))
+    setPricePerLiter(String(existing.pricePerLiter))
+    setIsFull(existing.isFull)
+    setMemo(existing.memo ?? '')
+    setLoaded(true)
+  }
+
+  if (!isEdit && vehicle && odometer === '' && meterType === 'odometer') {
     setOdometer(String(vehicle.currentOdometer))
   }
+
+  const backTo = `/vehicles/${vehicleId}`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -35,20 +56,24 @@ export default function FuelFormPage() {
     const odometerNum =
       meterType === 'trip' ? referenceOdometer + tripNum : Number(odometer) || 0
 
+    const fields = {
+      vehicleId,
+      date,
+      meterType,
+      odometer: odometerNum,
+      tripDistance: meterType === 'trip' ? tripNum : undefined,
+      liters: Number(liters) || 0,
+      pricePerLiter: Number(pricePerLiter) || 0,
+      isFull,
+      memo: memo || undefined,
+    }
+
     await db.transaction('rw', db.fuelRecords, db.vehicles, async () => {
-      await db.fuelRecords.add({
-        id: newId(),
-        vehicleId,
-        date,
-        meterType,
-        odometer: odometerNum,
-        tripDistance: meterType === 'trip' ? tripNum : undefined,
-        liters: Number(liters) || 0,
-        pricePerLiter: Number(pricePerLiter) || 0,
-        isFull,
-        memo: memo || undefined,
-        createdAt: nowIso(),
-      })
+      if (isEdit && fuelId) {
+        await db.fuelRecords.update(fuelId, fields)
+      } else {
+        await db.fuelRecords.add({ id: newId(), ...fields, createdAt: nowIso() })
+      }
       if (vehicle && odometerNum > vehicle.currentOdometer) {
         await db.vehicles.update(vehicleId, {
           currentOdometer: odometerNum,
@@ -57,7 +82,14 @@ export default function FuelFormPage() {
       }
     })
 
-    navigate(`/vehicles/${vehicleId}`)
+    navigate(backTo)
+  }
+
+  async function handleDelete() {
+    if (!fuelId) return
+    if (!confirm('この給油記録を削除します。よろしいですか？')) return
+    await db.fuelRecords.delete(fuelId)
+    navigate(backTo)
   }
 
   const totalCost =
@@ -65,7 +97,7 @@ export default function FuelFormPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title="給油記録を追加" />
+      <BackHeader title={isEdit ? '給油記録を編集' : '給油記録を追加'} to={backTo} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="給油日">
           <input
@@ -106,25 +138,20 @@ export default function FuelFormPage() {
 
         {meterType === 'odometer' ? (
           <Field label="走行距離 (km)">
-            <input
+            <DecimalInput
               required
-              type="number"
-              inputMode="numeric"
+              decimals={1}
               value={odometer}
-              onChange={(e) => setOdometer(e.target.value)}
-              className="input"
+              onChange={setOdometer}
             />
           </Field>
         ) : (
           <Field label="トリップメーターの値 (km)">
-            <input
+            <DecimalInput
               required
-              type="number"
-              step="0.1"
-              inputMode="decimal"
+              decimals={1}
               value={tripDistance}
-              onChange={(e) => setTripDistance(e.target.value)}
-              className="input"
+              onChange={setTripDistance}
               placeholder="前回の給油からの走行距離"
             />
             <span className="text-xs text-slate-500">
@@ -148,15 +175,12 @@ export default function FuelFormPage() {
               className="input"
             />
           </Field>
-          <Field label="単価 (円/L)">
-            <input
+          <Field label="単価 (円/L・整数)">
+            <DecimalInput
               required
-              type="number"
-              step="0.1"
-              inputMode="decimal"
+              decimals={0}
               value={pricePerLiter}
-              onChange={(e) => setPricePerLiter(e.target.value)}
-              className="input"
+              onChange={setPricePerLiter}
             />
           </Field>
         </div>
@@ -178,8 +202,14 @@ export default function FuelFormPage() {
         </Field>
 
         <button type="submit" className="btn-primary mt-2">
-          記録する
+          {isEdit ? '更新する' : '記録する'}
         </button>
+
+        {isEdit && (
+          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
+            この給油記録を削除する
+          </button>
+        )}
       </form>
     </div>
   )

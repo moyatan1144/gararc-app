@@ -34,7 +34,7 @@ export default function DeadlineFormPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title="期限を追加" />
+      <BackHeader title="期限を追加" to={`/vehicles/${vehicleId}`} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="種類">
           <select

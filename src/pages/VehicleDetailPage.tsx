@@ -47,7 +47,7 @@ export default function VehicleDetailPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title={vehicle.name} />
+      <BackHeader title={vehicle.name} to="/" />
 
       <div className="card mb-4 flex gap-3">
         {vehicle.photoDataUrl && (
@@ -130,16 +130,29 @@ export default function VehicleDetailPage() {
               平均燃費: <span className="font-semibold">{avgKmPerL.toFixed(2)} km/L</span>
             </div>
           )}
+          {fuelStats.length > 0 && avgKmPerL === undefined && (
+            <div className="card mb-2 text-sm text-slate-500">
+              燃費を計算するには、満タン給油の記録があと1回以上必要です。
+            </div>
+          )}
           {fuelStats.length === 0 && <Empty>まだ給油記録がありません</Empty>}
           <ul className="flex flex-col gap-2">
             {fuelStats.map(({ record, kmPerLiter }) => (
               <li key={record.id} className="card">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="font-medium">
                     {record.liters.toFixed(1)} L ・ ¥
                     {Math.round(record.liters * record.pricePerLiter).toLocaleString()}
                   </span>
-                  <span className="text-sm text-slate-500">{record.date}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500">{record.date}</span>
+                    <Link
+                      to={`/vehicles/${id}/fuel/${record.id}/edit`}
+                      className="text-sky-600 text-sm"
+                    >
+                      編集
+                    </Link>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-500">
                   {record.meterType === 'trip'

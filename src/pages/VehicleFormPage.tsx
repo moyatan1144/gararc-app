@@ -95,19 +95,51 @@ export default function VehicleFormPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title={isEdit ? '車両を編集' : '車両を追加'} />
+      <BackHeader
+        title={isEdit ? '車両を編集' : '車両を追加'}
+        to={isEdit && id ? `/vehicles/${id}` : '/'}
+      />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="車体の写真（任意）">
-          <div className="flex items-center gap-3">
-            {photoDataUrl && (
+          <input
+            id="vehicle-photo-input"
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="hidden"
+          />
+          {photoDataUrl ? (
+            <div className="flex items-center gap-3">
               <img
                 src={photoDataUrl}
                 alt=""
-                className="w-16 h-16 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
+                className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
               />
-            )}
-            <input type="file" accept="image/*" onChange={handlePhotoChange} className="text-sm" />
-          </div>
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="vehicle-photo-input"
+                  className="btn-secondary text-sm py-2 px-4 cursor-pointer text-center"
+                >
+                  写真を変更
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setPhotoDataUrl(undefined)}
+                  className="text-red-600 text-sm"
+                >
+                  写真を削除
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label
+              htmlFor="vehicle-photo-input"
+              className="flex flex-col items-center justify-center gap-1 h-28 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 cursor-pointer active:bg-slate-100 dark:active:bg-slate-800"
+            >
+              <span className="text-2xl leading-none">📷</span>
+              <span className="text-sm">タップして写真を選択</span>
+            </label>
+          )}
         </Field>
         <Field label="車両名（例: マイCB400）">
           <input
