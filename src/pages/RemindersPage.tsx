@@ -1,26 +1,15 @@
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
-import { computeDeadlineReminders, computeMaintenanceReminders, isUrgent, type Reminder } from '../reminders'
+import { useReminders } from '../hooks/useReminders'
+import { isUrgent, type Reminder } from '../reminders'
 
 export default function RemindersPage() {
-  const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
-  const maintenanceRecords = useLiveQuery(() => db.maintenanceRecords.toArray(), [])
-  const deadlines = useLiveQuery(() => db.deadlines.toArray(), [])
+  const { loading, reminders, vehicles } = useReminders()
 
-  if (!vehicles || !maintenanceRecords || !deadlines) {
+  if (loading) {
     return <div className="p-4 text-slate-500">読み込み中...</div>
   }
 
-  const reminders: Reminder[] = []
-  for (const vehicle of vehicles) {
-    const records = maintenanceRecords.filter((r) => r.vehicleId === vehicle.id)
-    reminders.push(...computeMaintenanceReminders(vehicle, records))
-  }
-  reminders.push(...computeDeadlineReminders(deadlines))
-
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
-
   const sorted = [...reminders].sort((a, b) => remainingValue(a) - remainingValue(b))
 
   return (

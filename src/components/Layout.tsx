@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import ReminderNotifier from './ReminderNotifier'
 
 const navItems = [
   { to: '/', label: '車両', icon: '🏍️', end: true },
@@ -9,6 +10,7 @@ const navItems = [
 export default function Layout() {
   return (
     <div className="min-h-dvh flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <ReminderNotifier />
       <main className="flex-1 pb-20 max-w-md mx-auto w-full">
         <Outlet />
       </main>

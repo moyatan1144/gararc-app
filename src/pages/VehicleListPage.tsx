@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
+import { useReminders } from '../hooks/useReminders'
 
 export default function VehicleListPage() {
   const vehicles = useLiveQuery(() => db.vehicles.orderBy('createdAt').toArray(), [])
+  const { urgentCount } = useReminders()
 
   return (
     <div className="p-4">
@@ -16,6 +18,15 @@ export default function VehicleListPage() {
           + 追加
         </Link>
       </header>
+
+      {urgentCount > 0 && (
+        <Link
+          to="/reminders"
+          className="block rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 px-4 py-3 text-sm font-medium mb-4"
+        >
+          ⚠️ 要注意のリマインダーが{urgentCount}件あります
+        </Link>
+      )}
 
       {vehicles?.length === 0 && (
         <div className="text-center text-slate-500 mt-16 text-sm">

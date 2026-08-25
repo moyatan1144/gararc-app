@@ -10,6 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-icon.svg'],
+      devOptions: {
+        enabled: true,
+      },
       manifest: {
         name: 'バイク管理',
         short_name: 'バイク管理',
