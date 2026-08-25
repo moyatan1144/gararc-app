@@ -14,6 +14,39 @@ export async function requestPermission(): Promise<NotificationPermission> {
   return Notification.requestPermission()
 }
 
+export function isInIframe(): boolean {
+  try {
+    return window.self !== window.top
+  } catch {
+    return true
+  }
+}
+
+// ブラウザ設定で一度ブロックされた通知は、JSからは再度許可を求められない
+// (ユーザー自身がブラウザ側で操作するしかない)。せめて迷わないよう、
+// 環境ごとにできるだけ具体的な手順を案内する。
+export function getPermissionHelpText(): string {
+  const ua = navigator.userAgent
+  const isIOS = /iPhone|iPad|iPod/.test(ua)
+  const isAndroid = /Android/.test(ua)
+  const isFirefox = /Firefox/.test(ua)
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua)
+
+  if (isIOS && isSafari) {
+    return '「設定」アプリ →「Safari」→「Webサイトの設定」→「通知」から、このサイトを「許可」に変更してください。'
+  }
+  if (isAndroid) {
+    return 'アドレスバー右上の「⋮」→「設定」→「サイトの設定」→「通知」から、このサイトを「許可」に変更してください。'
+  }
+  if (isSafari) {
+    return 'Safariメニュー →「設定」→「Webサイト」→「通知」から、このサイトを「許可」に変更してください。'
+  }
+  if (isFirefox) {
+    return 'アドレスバー左の鍵アイコンをクリックし、通知の権限を「許可」に変更してください。'
+  }
+  return 'アドレスバー左のアイコン（鍵や「i」マークなど）をクリック →「サイトの設定」→「通知」を「許可」に変更してください。'
+}
+
 export function isNotifyEnabled(): boolean {
   return localStorage.getItem(ENABLED_KEY) === '1'
 }
