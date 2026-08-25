@@ -34,7 +34,12 @@ export function computeMaintenanceReminders(
   for (const record of records) {
     if (!record.intervalKm && !record.intervalMonths) continue
     const current = latestByCategory.get(record.category)
-    if (!current || record.date > current.date) {
+    // 作業日(date)を優先し、同日の場合は入力日時(createdAt)が新しい方を採用する
+    const isNewer =
+      !current ||
+      record.date > current.date ||
+      (record.date === current.date && record.createdAt > current.createdAt)
+    if (isNewer) {
       latestByCategory.set(record.category, record)
     }
   }
