@@ -110,28 +110,30 @@ export default function FuelFormPage() {
         </Field>
 
         <Field label="距離の入力方法">
-          <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 text-sm">
+          <div className="flex flex-col sm:flex-row rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 text-sm">
             <button
               type="button"
               onClick={() => setMeterType('odometer')}
-              className={`flex-1 py-2 ${
+              className={`flex-1 py-2.5 px-3 text-center ${
                 meterType === 'odometer'
                   ? 'bg-sky-600 text-white font-medium'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
               }`}
             >
-              オドメーター（総走行距離）
+              オドメーター
+              <span className="block text-xs opacity-80">総走行距離</span>
             </button>
             <button
               type="button"
               onClick={() => setMeterType('trip')}
-              className={`flex-1 py-2 ${
+              className={`flex-1 py-2.5 px-3 text-center border-t sm:border-t-0 sm:border-l border-slate-300 dark:border-slate-700 ${
                 meterType === 'trip'
                   ? 'bg-sky-600 text-white font-medium'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
               }`}
             >
-              トリップメーター（前回給油からの距離）
+              トリップメーター
+              <span className="block text-xs opacity-80">前回給油からの距離</span>
             </button>
           </div>
         </Field>
@@ -163,7 +165,7 @@ export default function FuelFormPage() {
           </Field>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Field label="給油量 (L)">
             <input
               required

@@ -150,7 +150,7 @@ export default function VehicleFormPage() {
             placeholder="愛車の呼び名"
           />
         </Field>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Field label="メーカー（任意）">
             <input
               value={manufacturer}
@@ -168,7 +168,7 @@ export default function VehicleFormPage() {
             />
           </Field>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Field label="排気量 (cc・任意)">
             <input
               type="number"
@@ -196,7 +196,7 @@ export default function VehicleFormPage() {
             className="input"
           />
         </Field>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Field label="現在の走行距離 (km)">
             <input
               required

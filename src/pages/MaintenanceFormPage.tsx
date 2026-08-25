@@ -171,7 +171,7 @@ export default function MaintenanceFormPage() {
           <div className="text-sm font-medium mb-2">
             次回交換の目安（設定するとリマインダーに表示されます）
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Field label="距離間隔 (km)">
               <input
                 type="number"
