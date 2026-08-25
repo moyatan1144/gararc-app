@@ -120,7 +120,7 @@ export default function FuelFormPage() {
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
               }`}
             >
-              オドメーター
+              <span className="block text-base font-bold tracking-wide">ODO</span>
               <span className="block text-xs opacity-80">総走行距離</span>
             </button>
             <button
@@ -132,7 +132,7 @@ export default function FuelFormPage() {
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
               }`}
             >
-              トリップメーター
+              <span className="block text-base font-bold tracking-wide">TRIP</span>
               <span className="block text-xs opacity-80">前回給油からの距離</span>
             </button>
           </div>
