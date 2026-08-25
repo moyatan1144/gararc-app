@@ -6,7 +6,14 @@
 
 body {
   margin: 0;
+  background: #f8fafc;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #020617;
+  }
 }
 
 /* 数値入力のスピンボタンを全体で非表示にする */
