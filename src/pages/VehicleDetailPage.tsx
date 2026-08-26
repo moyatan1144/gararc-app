@@ -3,7 +3,12 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
-import { shareVehicle } from '../lib/share'
+import {
+  buildLineShareUrl,
+  buildVehicleShareText,
+  buildXShareUrl,
+  shareVehicle,
+} from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
 type Tab = 'maintenance' | 'fuel' | 'deadline'
@@ -15,6 +20,7 @@ export default function VehicleDetailPage() {
   const tabParam = searchParams.get('tab')
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'maintenance'
   const [shareStatus, setShareStatus] = useState<string | null>(null)
+  const [showManualShare, setShowManualShare] = useState(false)
 
   function setTab(next: Tab) {
     setSearchParams({ tab: next }, { replace: true })
@@ -46,11 +52,20 @@ export default function VehicleDetailPage() {
     if (!vehicle) return
     try {
       const result = await shareVehicle(vehicle)
-      setShareStatus(result === 'copied' ? 'コピーしました' : null)
+      if (result === 'copied') {
+        setShareStatus('コピーしました')
+        setShowManualShare(false)
+      } else if (result === 'manual') {
+        setShowManualShare(true)
+      } else {
+        setShareStatus(null)
+        setShowManualShare(false)
+      }
     } catch (err) {
       // 共有シートのキャンセルは正常操作なので無視する
       if (err instanceof Error && err.name === 'AbortError') return
-      setShareStatus('共有に失敗しました')
+      // 自動共有・自動コピーができない環境向けに、手動コピーの手段を出す
+      setShowManualShare(true)
     }
   }
 
@@ -85,10 +100,42 @@ export default function VehicleDetailPage() {
           {vehicle.specNotes && (
             <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
           )}
-          <button onClick={handleShare} className="text-sky-600 text-sm mt-2">
-            🔗 車両情報を共有
-          </button>
-          {shareStatus && <span className="text-xs text-slate-500 ml-2">{shareStatus}</span>}
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <button onClick={handleShare} className="text-sky-600 text-sm">
+              🔗 共有
+            </button>
+            <a
+              href={buildXShareUrl(vehicle)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 text-sm"
+            >
+              Xでシェア
+            </a>
+            <a
+              href={buildLineShareUrl(vehicle)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 text-sm"
+            >
+              LINEでシェア
+            </a>
+            {shareStatus && <span className="text-xs text-slate-500">{shareStatus}</span>}
+          </div>
+          {showManualShare && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500 mb-1">
+                自動共有・自動コピーがこの環境では使えないため、下のテキストを選択してコピーしてください。
+              </p>
+              <textarea
+                readOnly
+                value={buildVehicleShareText(vehicle)}
+                onFocus={(e) => e.target.select()}
+                rows={4}
+                className="input w-full text-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
 

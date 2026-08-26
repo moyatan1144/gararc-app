@@ -1,5 +1,6 @@
 const ENABLED_KEY = 'bike-app-notify-enabled'
 const LAST_NOTIFIED_KEY = 'bike-app-notify-last-date'
+const ASKED_KEY = 'bike-app-notify-asked'
 
 export function isNotificationApiSupported(): boolean {
   return typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator
@@ -45,6 +46,29 @@ export function getPermissionHelpText(): string {
     return 'アドレスバー左の鍵アイコンをクリックし、通知の権限を「許可」に変更してください。'
   }
   return 'アドレスバー左のアイコン（鍵や「i」マークなど）をクリック →「サイトの設定」→「通知」を「許可」に変更してください。'
+}
+
+// 初回起動時に一度だけ通知許可のポップアップを出すためのフラグ。
+// 誤って「ブロック」を押されても、二度目以降は聞き直さない(ブラウザ側で聞けなくなるため)。
+export function hasAskedForPermission(): boolean {
+  return localStorage.getItem(ASKED_KEY) === '1'
+}
+
+function markAskedForPermission(): void {
+  localStorage.setItem(ASKED_KEY, '1')
+}
+
+export async function requestPermissionOnFirstVisit(): Promise<void> {
+  if (isInIframe()) return
+  if (!isNotificationApiSupported()) return
+  if (hasAskedForPermission()) return
+  if (Notification.permission !== 'default') return
+
+  markAskedForPermission()
+  const result = await requestPermission()
+  if (result === 'granted') {
+    setNotifyEnabled(true)
+  }
 }
 
 export function isNotifyEnabled(): boolean {
