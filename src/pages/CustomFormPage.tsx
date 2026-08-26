@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { CUSTOM_CATEGORY_SUGGESTIONS } from '../types'
@@ -13,8 +13,10 @@ export default function CustomFormPage() {
     () => (recordId ? db.customRecords.get(recordId) : undefined),
     [recordId],
   )
+  const [searchParams] = useSearchParams()
+  const presetCategory = !isEdit ? searchParams.get('category') : null
 
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState(presetCategory ?? '')
   const [content, setContent] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [loaded, setLoaded] = useState(!isEdit)
@@ -52,22 +54,33 @@ export default function CustomFormPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title={isEdit ? 'カスタムを編集' : 'カスタムを追加'} to={backTo} />
+      <BackHeader
+        title={isEdit ? 'カスタムを編集' : presetCategory ? `${presetCategory}を更新` : 'カスタムを追加'}
+        to={backTo}
+      />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="カテゴリ">
-          <input
-            required
-            list="custom-category-suggestions"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="input"
-            placeholder="例: マフラー"
-          />
-          <datalist id="custom-category-suggestions">
-            {CUSTOM_CATEGORY_SUGGESTIONS.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          {presetCategory ? (
+            <div className="input bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {presetCategory}
+            </div>
+          ) : (
+            <>
+              <input
+                required
+                list="custom-category-suggestions"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="input"
+                placeholder="例: マフラー"
+              />
+              <datalist id="custom-category-suggestions">
+                {CUSTOM_CATEGORY_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </>
+          )}
         </Field>
         <Field label="変更後の内容">
           <input

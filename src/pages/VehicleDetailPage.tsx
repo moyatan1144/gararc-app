@@ -294,10 +294,10 @@ export default function VehicleDetailPage() {
                         {isOpen ? '閉じる' : '履歴'}
                       </button>
                       <Link
-                        to={`/vehicles/${id}/custom/${spec.latestRecord.id}/edit`}
-                        className="text-sky-600 text-sm"
+                        to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
+                        className="text-sky-600 text-sm font-medium"
                       >
-                        編集
+                        + 更新を記録
                       </Link>
                     </div>
                   </div>
