@@ -6,6 +6,7 @@ import VehicleDetailPage from './pages/VehicleDetailPage'
 import MaintenanceFormPage from './pages/MaintenanceFormPage'
 import FuelFormPage from './pages/FuelFormPage'
 import DeadlineFormPage from './pages/DeadlineFormPage'
+import CustomFormPage from './pages/CustomFormPage'
 import RemindersPage from './pages/RemindersPage'
 import SettingsPage from './pages/SettingsPage'
 
@@ -26,6 +27,8 @@ function App() {
         <Route path="/vehicles/:id/fuel/:fuelId/edit" element={<FuelFormPage />} />
         <Route path="/vehicles/:id/deadline/new" element={<DeadlineFormPage />} />
         <Route path="/vehicles/:id/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
+        <Route path="/vehicles/:id/custom/new" element={<CustomFormPage />} />
+        <Route path="/vehicles/:id/custom/:recordId/edit" element={<CustomFormPage />} />
         <Route path="/reminders" element={<RemindersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

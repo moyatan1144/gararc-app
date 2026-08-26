@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
+import { getCurrentCustomSpecs, buildCustomHistory } from '../customRecords'
 import {
   buildLineShareUrl,
   buildVehicleShareText,
@@ -11,8 +12,8 @@ import {
 } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
-type Tab = 'maintenance' | 'fuel' | 'deadline'
-const TABS: Tab[] = ['maintenance', 'fuel', 'deadline']
+type Tab = 'maintenance' | 'fuel' | 'deadline' | 'custom'
+const TABS: Tab[] = ['maintenance', 'fuel', 'deadline', 'custom']
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -21,6 +22,7 @@ export default function VehicleDetailPage() {
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'maintenance'
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [showManualShare, setShowManualShare] = useState(false)
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
   function setTab(next: Tab) {
     setSearchParams({ tab: next }, { replace: true })
@@ -42,11 +44,16 @@ export default function VehicleDetailPage() {
     () => (id ? db.deadlines.where('vehicleId').equals(id).sortBy('dueDate') : []),
     [id],
   )
+  const customRecords = useLiveQuery(
+    () => (id ? db.customRecords.where('vehicleId').equals(id).toArray() : []),
+    [id],
+  )
 
   if (!vehicle || !id) return <div className="p-4 text-slate-500">読み込み中...</div>
 
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
+  const customSpecs = customRecords ? getCurrentCustomSpecs(customRecords) : []
 
   async function handleShare() {
     if (!vehicle) return
@@ -148,6 +155,9 @@ export default function VehicleDetailPage() {
         </TabButton>
         <TabButton active={tab === 'deadline'} onClick={() => setTab('deadline')}>
           期限
+        </TabButton>
+        <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
+          カスタム
         </TabButton>
       </div>
 
@@ -255,6 +265,65 @@ export default function VehicleDetailPage() {
                 </div>
               </li>
             ))}
+          </ul>
+        </Section>
+      )}
+
+      {tab === 'custom' && (
+        <Section addLabel="+ カスタムを追加" addTo={`/vehicles/${id}/custom/new`}>
+          {customSpecs.length === 0 && <Empty>まだカスタム記録がありません</Empty>}
+          <ul className="flex flex-col gap-2">
+            {customSpecs.map((spec) => {
+              const isOpen = expandedCategory === spec.category
+              const categoryRecords =
+                customRecords?.filter((r) => r.category === spec.category) ?? []
+              const history = isOpen ? buildCustomHistory(categoryRecords) : []
+              return (
+                <li key={spec.category} className="card">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">{spec.category}</div>
+                      <div className="text-sm text-slate-500">{spec.content}</div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
+                        className="text-sky-600 text-sm"
+                      >
+                        {isOpen ? '閉じる' : '履歴'}
+                      </button>
+                      <Link
+                        to={`/vehicles/${id}/custom/${spec.latestRecord.id}/edit`}
+                        className="text-sky-600 text-sm"
+                      >
+                        編集
+                      </Link>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
+                      {history.map(({ record, before }) => (
+                        <li
+                          key={record.id}
+                          className="text-sm text-slate-500 flex justify-between items-center gap-2"
+                        >
+                          <span>
+                            {record.date}　{before} → {record.content}
+                          </span>
+                          <Link
+                            to={`/vehicles/${id}/custom/${record.id}/edit`}
+                            className="text-sky-600 flex-shrink-0"
+                          >
+                            編集
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </Section>
       )}

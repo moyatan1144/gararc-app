@@ -67,3 +67,26 @@ export const MAINTENANCE_CATEGORIES = [
   'プラグ',
   'その他',
 ] as const
+
+// 1レコード = 1回の変更。カテゴリごとの最新レコードが「現在の仕様」になる
+// (現在仕様と履歴を別々に管理しない: src/customRecords.ts参照)
+export interface CustomRecord {
+  id: string
+  vehicleId: string
+  category: string
+  content: string
+  date: string
+  createdAt: string
+}
+
+export const CUSTOM_CATEGORY_SUGGESTIONS = [
+  'マフラー',
+  'ミラー',
+  'スクリーン',
+  'レバー',
+  'ステップ',
+  'ハンドル',
+  'グリップ',
+  'シート',
+  'その他',
+] as const
