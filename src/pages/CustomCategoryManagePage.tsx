@@ -23,6 +23,7 @@ export default function CustomCategoryManagePage() {
   const [editValue, setEditValue] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const backTo = `/vehicles/${vehicleId}?tab=custom`
   const sorted = [...(categories ?? [])].sort((a, b) => {
@@ -47,6 +48,7 @@ export default function CustomCategoryManagePage() {
     setEditValue(currentName)
     setEditError(null)
     setRowError(null)
+    setConfirmDeleteId(null)
   }
 
   function cancelEdit() {
@@ -66,10 +68,16 @@ export default function CustomCategoryManagePage() {
     setEditValue('')
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`「${name}」を削除します。よろしいですか？`)) return
+  function startDelete(id: string) {
+    setConfirmDeleteId(id)
+    setEditingId(null)
+    setRowError(null)
+  }
+
+  async function confirmDelete(id: string) {
     setRowError(null)
     const result = await deleteCategory(id)
+    setConfirmDeleteId(null)
     if (!result.ok) {
       setRowError({ id, message: ERROR_MESSAGES[result.error ?? 'in_use'] })
     }
@@ -101,9 +109,32 @@ export default function CustomCategoryManagePage() {
         {sorted.map((category) => {
           const isProtected = category.name === OTHER_CUSTOM_CATEGORY
           const isEditing = editingId === category.id
+          const isConfirmingDelete = confirmDeleteId === category.id
           return (
             <li key={category.id} className="card">
-              {isEditing ? (
+              {isConfirmingDelete ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    「{category.name}」を削除します。よろしいですか？
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(category.id)}
+                      className="flex-1 rounded-lg bg-red-600 text-white text-sm font-medium py-1.5"
+                    >
+                      削除する
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="btn-secondary flex-1 py-1.5 text-sm"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              ) : isEditing ? (
                 <div className="flex flex-col gap-2">
                   <input
                     value={editValue}
@@ -145,7 +176,7 @@ export default function CustomCategoryManagePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(category.id, category.name)}
+                        onClick={() => startDelete(category.id)}
                         className="text-red-600 text-sm"
                       >
                         削除

@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import type { DeadlineType } from '../types'
 import BackHeader from '../components/BackHeader'
+import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 const TYPES: DeadlineType[] = ['車検', '任意保険', '自賠責保険', 'その他']
 
@@ -54,7 +55,6 @@ export default function DeadlineFormPage() {
 
   async function handleDelete() {
     if (!deadlineId) return
-    if (!confirm('この期限を削除します。よろしいですか？')) return
     await db.deadlines.delete(deadlineId)
     navigate(backTo)
   }
@@ -108,9 +108,11 @@ export default function DeadlineFormPage() {
         </button>
 
         {isEdit && (
-          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
-            この期限を削除する
-          </button>
+          <ConfirmDeleteButton
+            onConfirm={handleDelete}
+            label="この期限を削除する"
+            confirmMessage="この期限を削除します。よろしいですか？"
+          />
         )}
       </form>
     </div>

@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { MAINTENANCE_CATEGORIES } from '../types'
 import BackHeader from '../components/BackHeader'
+import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 export default function MaintenanceFormPage() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
@@ -92,7 +93,6 @@ export default function MaintenanceFormPage() {
 
   async function handleDelete() {
     if (!recordId) return
-    if (!confirm('この整備記録を削除します。よろしいですか？')) return
     await db.maintenanceRecords.delete(recordId)
     navigate(backTo)
   }
@@ -200,9 +200,11 @@ export default function MaintenanceFormPage() {
         </button>
 
         {isEdit && (
-          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
-            この整備記録を削除する
-          </button>
+          <ConfirmDeleteButton
+            onConfirm={handleDelete}
+            label="この整備記録を削除する"
+            confirmMessage="この整備記録を削除します。よろしいですか？"
+          />
         )}
       </form>
     </div>

@@ -5,6 +5,7 @@ import { db, newId, nowIso } from '../db'
 import type { MeterType } from '../types'
 import BackHeader from '../components/BackHeader'
 import DecimalInput from '../components/DecimalInput'
+import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 export default function FuelFormPage() {
   const { id: vehicleId, fuelId } = useParams<{ id: string; fuelId?: string }>()
@@ -87,7 +88,6 @@ export default function FuelFormPage() {
 
   async function handleDelete() {
     if (!fuelId) return
-    if (!confirm('この給油記録を削除します。よろしいですか？')) return
     await db.fuelRecords.delete(fuelId)
     navigate(backTo)
   }
@@ -208,9 +208,11 @@ export default function FuelFormPage() {
         </button>
 
         {isEdit && (
-          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
-            この給油記録を削除する
-          </button>
+          <ConfirmDeleteButton
+            onConfirm={handleDelete}
+            label="この給油記録を削除する"
+            confirmMessage="この給油記録を削除します。よろしいですか？"
+          />
         )}
       </form>
     </div>

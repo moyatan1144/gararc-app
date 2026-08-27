@@ -3,14 +3,20 @@ import { DEFAULT_CUSTOM_CATEGORIES, OTHER_CUSTOM_CATEGORY } from './types'
 import { normalizeCategoryName } from './lib/textNormalize'
 
 // 初回起動時など、カテゴリが1件も無ければ初期セットを投入する。
+// React StrictModeの二重effect実行などで同時に2回呼ばれても、
+// name のユニーク制約により重複は作られない(片方は失敗するだけなので握りつぶす)。
 export async function ensureDefaultCategoriesSeeded(): Promise<void> {
   const count = await db.customCategories.count()
   if (count > 0) return
 
   const now = nowIso()
-  await db.customCategories.bulkAdd(
-    DEFAULT_CUSTOM_CATEGORIES.map((name) => ({ id: newId(), name, createdAt: now })),
-  )
+  try {
+    await db.customCategories.bulkAdd(
+      DEFAULT_CUSTOM_CATEGORIES.map((name) => ({ id: newId(), name, createdAt: now })),
+    )
+  } catch {
+    // 既に別の呼び出しでシード済みなら無視してよい
+  }
 }
 
 export type CategoryMutationError = 'empty' | 'duplicate' | 'protected'

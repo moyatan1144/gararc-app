@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { readImageAsDataUrl } from '../lib/image'
 import BackHeader from '../components/BackHeader'
+import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 export default function VehicleFormPage() {
   const { id } = useParams()
@@ -83,7 +84,6 @@ export default function VehicleFormPage() {
 
   async function handleDelete() {
     if (!id) return
-    if (!confirm('この車両と関連する記録をすべて削除します。よろしいですか？')) return
     await db.transaction('rw', db.vehicles, db.maintenanceRecords, db.fuelRecords, db.deadlines, async () => {
       await db.maintenanceRecords.where('vehicleId').equals(id).delete()
       await db.fuelRecords.where('vehicleId').equals(id).delete()
@@ -235,13 +235,11 @@ export default function VehicleFormPage() {
         </button>
 
         {isEdit && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="text-red-600 text-sm py-2"
-          >
-            この車両を削除する
-          </button>
+          <ConfirmDeleteButton
+            onConfirm={handleDelete}
+            label="この車両を削除する"
+            confirmMessage="この車両と関連する記録をすべて削除します。よろしいですか？"
+          />
         )}
       </form>
     </div>

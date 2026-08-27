@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { OTHER_CUSTOM_CATEGORY } from '../types'
 import BackHeader from '../components/BackHeader'
+import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 export default function CustomFormPage() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
@@ -54,7 +55,6 @@ export default function CustomFormPage() {
 
   async function handleDelete() {
     if (!recordId) return
-    if (!confirm('このカスタム記録を削除します。よろしいですか？')) return
     await db.customRecords.delete(recordId)
     navigate(backTo)
   }
@@ -121,9 +121,11 @@ export default function CustomFormPage() {
         </button>
 
         {isEdit && (
-          <button type="button" onClick={handleDelete} className="text-red-600 text-sm py-2">
-            このカスタム記録を削除する
-          </button>
+          <ConfirmDeleteButton
+            onConfirm={handleDelete}
+            label="このカスタム記録を削除する"
+            confirmMessage="このカスタム記録を削除します。よろしいですか？"
+          />
         )}
       </form>
     </div>
