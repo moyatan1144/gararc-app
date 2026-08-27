@@ -281,6 +281,11 @@ export default function VehicleDetailPage() {
 
       {tab === 'custom' && (
         <Section addLabel="+ カスタムを追加" addTo={`/vehicles/${id}/custom/new`}>
+          <div className="flex justify-end -mt-1 mb-2">
+            <Link to={`/vehicles/${id}/custom/categories`} className="text-sky-600 text-xs">
+              カテゴリ管理
+            </Link>
+          </div>
           {customSpecs.length === 0 && <Empty>まだカスタム記録がありません</Empty>}
           <ul className="flex flex-col gap-2">
             {customSpecs.map((spec) => {

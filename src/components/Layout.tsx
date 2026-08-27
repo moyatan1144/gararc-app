@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import ReminderNotifier from './ReminderNotifier'
 import NotificationPrompt from './NotificationPrompt'
+import { ensureDefaultCategoriesSeeded } from '../customCategories'
 
 const navItems = [
   { to: '/', label: '車両', icon: '🏍️', end: true },
@@ -9,6 +11,10 @@ const navItems = [
 ]
 
 export default function Layout() {
+  useEffect(() => {
+    ensureDefaultCategoriesSeeded()
+  }, [])
+
   return (
     <div className="min-h-dvh flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <NotificationPrompt />

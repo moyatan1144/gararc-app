@@ -7,6 +7,7 @@ import MaintenanceFormPage from './pages/MaintenanceFormPage'
 import FuelFormPage from './pages/FuelFormPage'
 import DeadlineFormPage from './pages/DeadlineFormPage'
 import CustomFormPage from './pages/CustomFormPage'
+import CustomCategoryManagePage from './pages/CustomCategoryManagePage'
 import RemindersPage from './pages/RemindersPage'
 import SettingsPage from './pages/SettingsPage'
 import SharePage from './pages/SharePage'
@@ -31,6 +32,7 @@ function App() {
         <Route path="/vehicles/:id/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
         <Route path="/vehicles/:id/custom/new" element={<CustomFormPage />} />
         <Route path="/vehicles/:id/custom/:recordId/edit" element={<CustomFormPage />} />
+        <Route path="/vehicles/:id/custom/categories" element={<CustomCategoryManagePage />} />
         <Route path="/reminders" element={<RemindersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

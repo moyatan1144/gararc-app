@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
-import { CUSTOM_CATEGORY_SUGGESTIONS } from '../types'
+import { OTHER_CUSTOM_CATEGORY } from '../types'
 import BackHeader from '../components/BackHeader'
 
 export default function CustomFormPage() {
@@ -13,6 +13,13 @@ export default function CustomFormPage() {
     () => (recordId ? db.customRecords.get(recordId) : undefined),
     [recordId],
   )
+  const categories = useLiveQuery(() => db.customCategories.toArray(), [])
+  const sortedCategories = [...(categories ?? [])].sort((a, b) => {
+    if (a.name === OTHER_CUSTOM_CATEGORY) return 1
+    if (b.name === OTHER_CUSTOM_CATEGORY) return -1
+    return a.name.localeCompare(b.name, 'ja')
+  })
+
   const [searchParams] = useSearchParams()
   const presetCategory = !isEdit ? searchParams.get('category') : null
 
@@ -66,19 +73,27 @@ export default function CustomFormPage() {
             </div>
           ) : (
             <>
-              <input
+              <select
                 required
-                list="custom-category-suggestions"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="input"
-                placeholder="例: マフラー"
-              />
-              <datalist id="custom-category-suggestions">
-                {CUSTOM_CATEGORY_SUGGESTIONS.map((c) => (
-                  <option key={c} value={c} />
+              >
+                <option value="" disabled>
+                  選択してください
+                </option>
+                {sortedCategories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
                 ))}
-              </datalist>
+              </select>
+              <Link
+                to={`/vehicles/${vehicleId}/custom/categories`}
+                className="text-sky-600 text-xs mt-1 inline-block"
+              >
+                カテゴリを管理
+              </Link>
             </>
           )}
         </Field>

@@ -79,7 +79,17 @@ export interface CustomRecord {
   createdAt: string
 }
 
-export const CUSTOM_CATEGORY_SUGGESTIONS = [
+// ユーザーが自由に追加・編集・削除できるカテゴリ一覧(「その他」のみ削除・改名不可)。
+// 初回起動時にDEFAULT_CUSTOM_CATEGORIESの内容でシードする。
+export interface CustomCategory {
+  id: string
+  name: string
+  createdAt: string
+}
+
+export const OTHER_CUSTOM_CATEGORY = 'その他'
+
+export const DEFAULT_CUSTOM_CATEGORIES = [
   'マフラー',
   'ミラー',
   'スクリーン',
@@ -88,5 +98,5 @@ export const CUSTOM_CATEGORY_SUGGESTIONS = [
   'ハンドル',
   'グリップ',
   'シート',
-  'その他',
+  OTHER_CUSTOM_CATEGORY,
 ] as const
