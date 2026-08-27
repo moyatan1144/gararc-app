@@ -6,9 +6,9 @@ import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
 import { getCurrentCustomSpecs, buildCustomHistory } from '../customRecords'
 import {
   buildLineShareUrl,
-  buildVehicleShareText,
+  buildVehicleShareUrl,
   buildXShareUrl,
-  shareVehicle,
+  shareVehicleLink,
 } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
@@ -54,11 +54,12 @@ export default function VehicleDetailPage() {
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
   const customSpecs = customRecords ? getCurrentCustomSpecs(customRecords) : []
+  const shareUrl = buildVehicleShareUrl(vehicle, customSpecs)
 
   async function handleShare() {
     if (!vehicle) return
     try {
-      const result = await shareVehicle(vehicle)
+      const result = await shareVehicleLink(vehicle, shareUrl)
       if (result === 'copied') {
         setShareStatus('コピーしました')
         setShowManualShare(false)
@@ -107,12 +108,18 @@ export default function VehicleDetailPage() {
           {vehicle.specNotes && (
             <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
           )}
+          <Link
+            to={`/vehicles/${id}?tab=custom`}
+            className="inline-block text-sky-600 text-sm mt-2"
+          >
+            → 現在のカスタム仕様を見る
+          </Link>
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <button onClick={handleShare} className="text-sky-600 text-sm">
               🔗 共有
             </button>
             <a
-              href={buildXShareUrl(vehicle)}
+              href={buildXShareUrl(vehicle, shareUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-600 text-sm"
@@ -120,7 +127,7 @@ export default function VehicleDetailPage() {
               Xでシェア
             </a>
             <a
-              href={buildLineShareUrl(vehicle)}
+              href={buildLineShareUrl(shareUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-600 text-sm"
@@ -129,16 +136,19 @@ export default function VehicleDetailPage() {
             </a>
             {shareStatus && <span className="text-xs text-slate-500">{shareStatus}</span>}
           </div>
+          <p className="text-xs text-slate-500 mt-1">
+            現在のカスタム仕様も含めたページのリンクを共有します
+          </p>
           {showManualShare && (
             <div className="mt-2">
               <p className="text-xs text-slate-500 mb-1">
-                自動共有・自動コピーがこの環境では使えないため、下のテキストを選択してコピーしてください。
+                自動共有・自動コピーがこの環境では使えないため、下のリンクを選択してコピーしてください。
               </p>
               <textarea
                 readOnly
-                value={buildVehicleShareText(vehicle)}
+                value={shareUrl}
                 onFocus={(e) => e.target.select()}
-                rows={4}
+                rows={2}
                 className="input w-full text-sm"
               />
             </div>

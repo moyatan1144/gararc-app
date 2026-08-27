@@ -217,14 +217,17 @@ export default function VehicleFormPage() {
             />
           </Field>
         </div>
-        <Field label="仕様・カスタム内容など（任意）">
+        <Field label="メモ（任意）">
           <textarea
             value={specNotes}
             onChange={(e) => setSpecNotes(e.target.value)}
             className="input"
             rows={4}
-            placeholder="例: マフラー: 〇〇製に交換、その他自由にメモ"
+            placeholder="例: 次回の点検予定、気になっている箇所など自由にメモ"
           />
+          <span className="text-xs text-slate-500">
+            マフラーやミラーなどのカスタム内容は「カスタム」タブで記録できます。
+          </span>
         </Field>
 
         <button type="submit" className="btn-primary mt-2">

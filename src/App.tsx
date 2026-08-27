@@ -9,10 +9,12 @@ import DeadlineFormPage from './pages/DeadlineFormPage'
 import CustomFormPage from './pages/CustomFormPage'
 import RemindersPage from './pages/RemindersPage'
 import SettingsPage from './pages/SettingsPage'
+import SharePage from './pages/SharePage'
 
 function App() {
   return (
     <Routes>
+      <Route path="/share/:payload" element={<SharePage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<VehicleListPage />} />
         <Route path="/vehicles/new" element={<VehicleFormPage />} />
