@@ -298,9 +298,18 @@ export default function VehicleDetailPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="font-medium">{spec.category}</div>
-                      <div className="text-sm text-slate-500">{spec.content}</div>
+                      <div className="text-sm text-slate-500">
+                        {spec.content}
+                        {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <Link
+                        to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
+                        className="text-sky-600 text-sm font-medium"
+                      >
+                        ＋更新
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
@@ -308,12 +317,6 @@ export default function VehicleDetailPage() {
                       >
                         {isOpen ? '閉じる' : '履歴'}
                       </button>
-                      <Link
-                        to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
-                        className="text-sky-600 text-sm font-medium"
-                      >
-                        + 更新を記録
-                      </Link>
                     </div>
                   </div>
                   {isOpen && (
@@ -324,7 +327,8 @@ export default function VehicleDetailPage() {
                           className="text-sm text-slate-500 flex justify-between items-center gap-2"
                         >
                           <span>
-                            {record.date}　{before} → {record.content}
+                            {record.date}　{before !== null ? `${before} → ${record.content}` : record.content}
+                            {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
                           </span>
                           <Link
                             to={`/vehicles/${id}/custom/${record.id}/edit`}

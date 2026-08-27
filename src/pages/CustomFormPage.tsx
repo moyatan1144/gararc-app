@@ -5,6 +5,7 @@ import { db, newId, nowIso } from '../db'
 import { OTHER_CUSTOM_CATEGORY } from '../types'
 import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
+import DecimalInput from '../components/DecimalInput'
 
 export default function CustomFormPage() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
@@ -26,12 +27,14 @@ export default function CustomFormPage() {
 
   const [category, setCategory] = useState(presetCategory ?? '')
   const [content, setContent] = useState('')
+  const [cost, setCost] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [loaded, setLoaded] = useState(!isEdit)
 
   if (isEdit && existing && !loaded) {
     setCategory(existing.category)
     setContent(existing.content)
+    setCost(existing.cost !== undefined ? String(existing.cost) : '')
     setDate(existing.date)
     setLoaded(true)
   }
@@ -42,7 +45,12 @@ export default function CustomFormPage() {
     e.preventDefault()
     if (!vehicleId) return
 
-    const fields = { category, content, date }
+    const fields = {
+      category,
+      content,
+      cost: cost ? Number(cost) : undefined,
+      date,
+    }
 
     if (isEdit && recordId) {
       await db.customRecords.update(recordId, fields)
@@ -114,6 +122,9 @@ export default function CustomFormPage() {
             onChange={(e) => setDate(e.target.value)}
             className="input"
           />
+        </Field>
+        <Field label="価格（円・任意）">
+          <DecimalInput decimals={0} value={cost} onChange={setCost} />
         </Field>
 
         <button type="submit" className="btn-primary mt-2">

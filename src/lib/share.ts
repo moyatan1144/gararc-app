@@ -18,7 +18,7 @@ export function buildVehicleShareUrl(vehicle: Vehicle, specs: CurrentCustomSpec[
     displacementCc: vehicle.displacementCc,
     modelYear: vehicle.modelYear,
     currentOdometer: vehicle.currentOdometer,
-    specs: specs.map((s) => ({ category: s.category, content: s.content })),
+    specs: specs.map((s) => ({ category: s.category, content: s.content, cost: s.cost })),
   })
 }
 

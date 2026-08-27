@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { MAINTENANCE_CATEGORIES } from '../types'
+import { getCurrentCustomSpecs } from '../customRecords'
 import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
@@ -18,6 +19,21 @@ export default function MaintenanceFormPage() {
     () => (recordId ? db.maintenanceRecords.get(recordId) : undefined),
     [recordId],
   )
+  const customCategories = useLiveQuery(() => db.customCategories.toArray(), [])
+  const vehicleCustomRecords = useLiveQuery(
+    () => (vehicleId ? db.customRecords.where('vehicleId').equals(vehicleId).toArray() : []),
+    [vehicleId],
+  )
+  const currentCustomSpecs = getCurrentCustomSpecs(vehicleCustomRecords ?? [])
+
+  // 整備記録のカテゴリは、既定の消耗品カテゴリに加えて
+  // カスタムタブで管理しているカテゴリ(マフラー等)も選べるようにする
+  const categoryOptions = [
+    ...MAINTENANCE_CATEGORIES,
+    ...(customCategories ?? [])
+      .map((c) => c.name)
+      .filter((name) => !(MAINTENANCE_CATEGORIES as readonly string[]).includes(name)),
+  ]
 
   const [category, setCategory] = useState<string>(MAINTENANCE_CATEGORIES[0])
   const [title, setTitle] = useState('')
@@ -107,7 +123,7 @@ export default function MaintenanceFormPage() {
             onChange={(e) => setCategory(e.target.value)}
             className="input"
           >
-            {MAINTENANCE_CATEGORIES.map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -124,11 +140,25 @@ export default function MaintenanceFormPage() {
         </Field>
         <Field label="メーカー・ブランド（任意）">
           <input
+            list="maintenance-brand-suggestions"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
             className="input"
             placeholder="例: MICHELIN"
           />
+          <datalist id="maintenance-brand-suggestions">
+            {currentCustomSpecs
+              .filter((s) => s.category === category)
+              .map((s) => (
+                <option key={s.category} value={s.content} />
+              ))}
+          </datalist>
+          {currentCustomSpecs.find((s) => s.category === category) && (
+            <span className="text-xs text-slate-500">
+              「カスタム」に登録済み:{' '}
+              {currentCustomSpecs.find((s) => s.category === category)?.content}
+            </span>
+          )}
         </Field>
         <Field label="作業日">
           <input

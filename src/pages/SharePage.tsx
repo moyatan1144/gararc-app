@@ -44,7 +44,14 @@ export default function SharePage() {
                   className="flex justify-between gap-3 text-sm border-b border-slate-200 dark:border-slate-800 pb-2 last:border-0 last:pb-0"
                 >
                   <span className="text-slate-500 flex-shrink-0">{spec.category}</span>
-                  <span className="font-medium text-right">{spec.content}</span>
+                  <span className="font-medium text-right">
+                    {spec.content}
+                    {spec.cost !== undefined && (
+                      <span className="block text-xs text-slate-500 font-normal">
+                        ¥{spec.cost.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

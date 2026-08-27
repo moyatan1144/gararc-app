@@ -8,7 +8,7 @@ export interface ShareablePayload {
   displacementCc?: number
   modelYear?: number
   currentOdometer: number
-  specs: { category: string; content: string }[]
+  specs: { category: string; content: string; cost?: number }[]
 }
 
 function toBase64Url(input: string): string {

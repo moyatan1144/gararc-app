@@ -167,15 +167,7 @@ export default function FuelFormPage() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Field label="給油量 (L)">
-            <input
-              required
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              value={liters}
-              onChange={(e) => setLiters(e.target.value)}
-              className="input"
-            />
+            <DecimalInput required decimals={2} value={liters} onChange={setLiters} />
           </Field>
           <Field label="単価 (円/L・整数)">
             <DecimalInput
@@ -221,7 +213,7 @@ export default function FuelFormPage() {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm flex-1">
+    <label className="flex flex-col gap-1 text-sm flex-1 min-w-0">
       <span className="text-slate-600 dark:text-slate-400">{label}</span>
       {children}
     </label>

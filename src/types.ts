@@ -75,6 +75,7 @@ export interface CustomRecord {
   vehicleId: string
   category: string
   content: string
+  cost?: number
   date: string
   createdAt: string
 }
