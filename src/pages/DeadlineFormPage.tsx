@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import type { DeadlineType } from '../types'
@@ -22,12 +22,18 @@ export default function DeadlineFormPage() {
     () => (existing ? db.vehicles.get(existing.vehicleId) : undefined),
     [existing],
   )
+  const [searchParams] = useSearchParams()
+  const presetVehicleId = !isEdit ? searchParams.get('vehicleId') : null
+  const presetVehicle = useLiveQuery(
+    () => (presetVehicleId ? db.vehicles.get(presetVehicleId) : undefined),
+    [presetVehicleId],
+  )
 
-  const [vehicleId, setVehicleId] = useState('')
+  const [vehicleId, setVehicleId] = useState(presetVehicleId ?? '')
   const [type, setType] = useState<DeadlineType>('車検')
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
-  const [notifyBeforeDays, setNotifyBeforeDays] = useState('30')
+  const [notifyBeforeDays, setNotifyBeforeDays] = useState('60')
   const [memo, setMemo] = useState('')
   const [loaded, setLoaded] = useState(!isEdit)
 
@@ -50,7 +56,7 @@ export default function DeadlineFormPage() {
       type,
       label: label || type,
       dueDate,
-      notifyBeforeDays: Number(notifyBeforeDays) || 30,
+      notifyBeforeDays: Number(notifyBeforeDays) || 60,
       memo: memo || undefined,
     }
 
@@ -74,9 +80,9 @@ export default function DeadlineFormPage() {
       <BackHeader title={isEdit ? '期限を編集' : '期限を追加'} to={backTo} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="車両">
-          {isEdit ? (
+          {isEdit || presetVehicleId ? (
             <div className="input bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {existingVehicle?.name ?? '読み込み中...'}
+              {(isEdit ? existingVehicle?.name : presetVehicle?.name) ?? '読み込み中...'}
             </div>
           ) : (
             <select
@@ -126,7 +132,7 @@ export default function DeadlineFormPage() {
             className="input"
           />
         </Field>
-        <Field label="何日前から通知するか">
+        <Field label="何日前から通知するか（初期値: 2ヶ月前）">
           <input
             type="number"
             inputMode="numeric"

@@ -11,7 +11,15 @@ export default function RemindersPage() {
 
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
   const sorted = [...reminders].sort((a, b) => remainingValue(a) - remainingValue(b))
-  const deadlinesByDate = [...deadlines].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
+  const deadlinesByVehicleId = new Map<string, typeof deadlines>()
+  for (const vehicle of vehicles) deadlinesByVehicleId.set(vehicle.id, [])
+  for (const d of deadlines) {
+    const list = deadlinesByVehicleId.get(d.vehicleId)
+    if (list) list.push(d)
+  }
+  for (const list of deadlinesByVehicleId.values()) {
+    list.sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
+  }
 
   return (
     <div className="p-4 flex flex-col gap-6">
@@ -48,35 +56,56 @@ export default function RemindersPage() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-bold">期限一覧</h2>
-          <Link to="/reminders/deadline/new" className="text-sky-600 text-sm font-medium">
-            + 期限を追加
-          </Link>
-        </div>
+        <h2 className="text-lg font-bold mb-2">期限一覧</h2>
 
-        {deadlinesByDate.length === 0 && (
+        {vehicles.length === 0 && (
           <div className="text-center text-slate-500 py-8 text-sm">
-            まだ期限が登録されていません。
+            車両を登録すると、ここで車両ごとに期限を管理できます。
           </div>
         )}
 
-        <ul className="flex flex-col gap-2">
-          {deadlinesByDate.map((d) => {
-            const vehicle = vehicleById.get(d.vehicleId)
+        <ul className="flex flex-col gap-4">
+          {vehicles.map((vehicle) => {
+            const vehicleDeadlines = deadlinesByVehicleId.get(vehicle.id) ?? []
             return (
-              <li key={d.id}>
-                <Link to={`/reminders/deadline/${d.id}/edit`} className="card block">
-                  <div className="flex justify-between items-start">
-                    <span className="font-medium">
-                      {vehicle?.name} ・ {d.type} ・ {d.label}
-                    </span>
-                    <span className="text-sm text-slate-500 flex-shrink-0">{d.dueDate}</span>
-                  </div>
-                  {d.memo && (
-                    <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">{d.memo}</div>
-                  )}
-                </Link>
+              <li key={vehicle.id} className="card">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">🏍️ {vehicle.name}</span>
+                  <Link
+                    to={`/reminders/deadline/new?vehicleId=${vehicle.id}`}
+                    className="text-sky-600 text-sm font-medium"
+                  >
+                    + 期限を追加
+                  </Link>
+                </div>
+                {vehicleDeadlines.length === 0 ? (
+                  <div className="text-sm text-slate-500">まだ期限が登録されていません</div>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {vehicleDeadlines.map((d) => (
+                      <li key={d.id}>
+                        <Link
+                          to={`/reminders/deadline/${d.id}/edit`}
+                          className="block rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2"
+                        >
+                          <div className="flex justify-between items-start">
+                            <span className="text-sm font-medium">
+                              {d.type} ・ {d.label}
+                            </span>
+                            <span className="text-sm text-slate-500 flex-shrink-0">
+                              {d.dueDate}
+                            </span>
+                          </div>
+                          {d.memo && (
+                            <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">
+                              {d.memo}
+                            </div>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             )
           })}
