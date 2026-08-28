@@ -84,12 +84,19 @@ export default function VehicleFormPage() {
 
   async function handleDelete() {
     if (!id) return
-    await db.transaction('rw', db.vehicles, db.maintenanceRecords, db.fuelRecords, db.deadlines, async () => {
-      await db.maintenanceRecords.where('vehicleId').equals(id).delete()
-      await db.fuelRecords.where('vehicleId').equals(id).delete()
-      await db.deadlines.where('vehicleId').equals(id).delete()
-      await db.vehicles.delete(id)
-    })
+    await db.transaction(
+      'rw',
+      db.vehicles,
+      db.bikeLogRecords,
+      db.fuelRecords,
+      db.deadlines,
+      async () => {
+        await db.bikeLogRecords.where('vehicleId').equals(id).delete()
+        await db.fuelRecords.where('vehicleId').equals(id).delete()
+        await db.deadlines.where('vehicleId').equals(id).delete()
+        await db.vehicles.delete(id)
+      },
+    )
     navigate('/')
   }
 

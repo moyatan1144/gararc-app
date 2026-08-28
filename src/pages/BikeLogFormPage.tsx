@@ -3,16 +3,17 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { OTHER_CUSTOM_CATEGORY, CUSTOM_TAGS, SCHEDULE_CUSTOM_TAGS } from '../types'
+import { buildBikeLogHistory } from '../bikeLog'
 import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 import DecimalInput from '../components/DecimalInput'
 
-export default function CustomFormPage() {
+export default function BikeLogFormPage() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
   const isEdit = Boolean(recordId)
   const navigate = useNavigate()
   const existing = useLiveQuery(
-    () => (recordId ? db.customRecords.get(recordId) : undefined),
+    () => (recordId ? db.bikeLogRecords.get(recordId) : undefined),
     [recordId],
   )
   const categories = useLiveQuery(() => db.customCategories.toArray(), [])
@@ -27,12 +28,26 @@ export default function CustomFormPage() {
     [vehicleId],
   )
 
+  // 編集中のカテゴリの全記録(履歴表示・個別削除・カテゴリ一括削除に使う)。
+  // フォーム中でカテゴリを変更しても、履歴は「元々編集していたカテゴリ」のまま固定する。
+  const historyCategory = existing?.category
+  const categoryRecords = useLiveQuery(
+    () =>
+      vehicleId && historyCategory
+        ? db.bikeLogRecords.where({ vehicleId, category: historyCategory }).toArray()
+        : [],
+    [vehicleId, historyCategory],
+  )
+  const history = categoryRecords ? buildBikeLogHistory(categoryRecords) : []
+
   const [searchParams] = useSearchParams()
   const presetCategory = !isEdit ? searchParams.get('category') : null
 
   const [category, setCategory] = useState(presetCategory ?? '')
   const [content, setContent] = useState('')
+  const [brand, setBrand] = useState('')
   const [cost, setCost] = useState('')
+  const [memo, setMemo] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [tags, setTags] = useState<string[]>([])
   const [odometer, setOdometer] = useState('')
@@ -43,7 +58,9 @@ export default function CustomFormPage() {
   if (isEdit && existing && !loaded) {
     setCategory(existing.category)
     setContent(existing.content)
+    setBrand(existing.brand ?? '')
     setCost(existing.cost !== undefined ? String(existing.cost) : '')
+    setMemo(existing.memo ?? '')
     setDate(existing.date)
     setTags(existing.tags ?? [])
     setOdometer(existing.odometer !== undefined ? String(existing.odometer) : '')
@@ -54,9 +71,12 @@ export default function CustomFormPage() {
     setLoaded(true)
   }
 
-  const isSchedule = tags.some((t) => (SCHEDULE_CUSTOM_TAGS as string[]).includes(t))
+  // タグ未選択(初期状態)では全項目を表示し、タグを選んだ時だけ絞り込む。
+  // #消耗品交換・#メンテナンスのどちらかを選んでいれば次回交換の目安欄を表示する。
+  const showSchedule =
+    tags.length === 0 || tags.some((t) => (SCHEDULE_CUSTOM_TAGS as string[]).includes(t))
 
-  if (!isEdit && isSchedule && vehicle && odometer === '') {
+  if (!isEdit && showSchedule && vehicle && odometer === '') {
     setOdometer(String(vehicle.currentOdometer))
   }
 
@@ -73,33 +93,44 @@ export default function CustomFormPage() {
     const fields = {
       category,
       content,
+      brand: brand || undefined,
       cost: cost ? Number(cost) : undefined,
+      memo: memo || undefined,
       date,
       tags: tags.length > 0 ? tags : undefined,
-      odometer: isSchedule && odometer ? Number(odometer) : undefined,
-      intervalKm: isSchedule && intervalKm ? Number(intervalKm) : undefined,
-      intervalMonths: isSchedule && intervalMonths ? Number(intervalMonths) : undefined,
+      odometer: showSchedule && odometer ? Number(odometer) : undefined,
+      intervalKm: showSchedule && intervalKm ? Number(intervalKm) : undefined,
+      intervalMonths: showSchedule && intervalMonths ? Number(intervalMonths) : undefined,
     }
 
     if (isEdit && recordId) {
-      await db.customRecords.update(recordId, fields)
+      await db.bikeLogRecords.update(recordId, fields)
     } else {
-      await db.customRecords.add({ id: newId(), vehicleId, ...fields, createdAt: nowIso() })
+      await db.bikeLogRecords.add({ id: newId(), vehicleId, ...fields, createdAt: nowIso() })
     }
 
     navigate(backTo)
   }
 
-  async function handleDelete() {
-    if (!recordId) return
-    await db.customRecords.delete(recordId)
+  async function handleDeleteRecord(targetId: string) {
+    await db.bikeLogRecords.delete(targetId)
+    if (targetId === recordId) {
+      navigate(backTo)
+    }
+  }
+
+  async function handleDeleteCategory() {
+    if (!vehicleId || !historyCategory) return
+    await db.bikeLogRecords.where({ vehicleId, category: historyCategory }).delete()
     navigate(backTo)
   }
 
   return (
     <div className="p-4">
       <BackHeader
-        title={isEdit ? 'カスタムを編集' : presetCategory ? `${presetCategory}を更新` : 'カスタムを追加'}
+        title={
+          isEdit ? 'バイクログを編集' : presetCategory ? `${presetCategory}を更新` : 'バイクログに追加'
+        }
         to={backTo}
       />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -126,7 +157,7 @@ export default function CustomFormPage() {
                 ))}
               </select>
               <Link
-                to={`/vehicles/${vehicleId}/custom/categories`}
+                to={`/vehicles/${vehicleId}/bikelog/categories`}
                 className="text-sky-600 text-xs mt-1 inline-block"
               >
                 カテゴリを管理
@@ -134,16 +165,24 @@ export default function CustomFormPage() {
             </>
           )}
         </Field>
-        <Field label="変更後の内容">
+        <Field label="内容">
           <input
             required
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="input"
-            placeholder="例: ヨシムラ R-11"
+            placeholder="例: ヨシムラ R-11 / フロントタイヤ交換"
           />
         </Field>
-        <Field label="変更日">
+        <Field label="メーカー・ブランド（任意）">
+          <input
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            className="input"
+            placeholder="例: MICHELIN"
+          />
+        </Field>
+        <Field label="日付">
           <input
             required
             type="date"
@@ -152,8 +191,16 @@ export default function CustomFormPage() {
             className="input"
           />
         </Field>
-        <Field label="価格（円・任意）">
+        <Field label="費用（円・任意）">
           <DecimalInput decimals={0} value={cost} onChange={setCost} />
+        </Field>
+        <Field label="メモ（任意）">
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            className="input"
+            rows={3}
+          />
         </Field>
         <Field label="タグ（任意・複数選択可）">
           <div className="flex flex-wrap gap-2">
@@ -180,7 +227,7 @@ export default function CustomFormPage() {
           </span>
         </Field>
 
-        {isSchedule && (
+        {showSchedule && (
           <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
             <div className="text-sm font-medium mb-2">
               次回交換の目安（設定するとリマインダーに表示されます）
@@ -220,17 +267,49 @@ export default function CustomFormPage() {
         )}
 
         <button type="submit" className="btn-primary mt-2">
-          {isEdit ? '更新する' : '記録する'}
+          {isEdit ? '更新する' : '登録する'}
         </button>
-
-        {isEdit && (
-          <ConfirmDeleteButton
-            onConfirm={handleDelete}
-            label="このカスタム記録を削除する"
-            confirmMessage="このカスタム記録を削除します。よろしいですか？"
-          />
-        )}
       </form>
+
+      {isEdit && (
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-medium">{historyCategory}の履歴</h2>
+            <ConfirmDeleteButton
+              onConfirm={handleDeleteCategory}
+              label="このカテゴリを全て削除"
+              confirmMessage={`「${historyCategory}」の記録を全て削除します。履歴も含めて元に戻せません。よろしいですか？`}
+            />
+          </div>
+          <ul className="flex flex-col gap-2">
+            {history.map(({ record, before }) => (
+              <li key={record.id} className="card">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="text-sm">
+                    <div className="text-slate-500">{record.date}</div>
+                    <div>
+                      {before !== null ? `${before} → ${record.content}` : record.content}
+                      {record.brand && ` ・ ${record.brand}`}
+                    </div>
+                    <div className="text-slate-500">
+                      {record.odometer !== undefined && `${record.odometer.toLocaleString()} km`}
+                      {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
+                    </div>
+                    {record.memo && <div className="text-slate-500 mt-1">{record.memo}</div>}
+                  </div>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDeleteRecord(record.id)}
+                    label="この記録を削除"
+                    confirmMessage="この記録を削除します。よろしいですか？"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,7 +10,7 @@ const ERROR_MESSAGES = {
   empty: 'カテゴリ名を入力してください',
   duplicate: '同じカテゴリ名が既に登録されています',
   protected: '「その他」は編集・削除できません',
-  in_use: 'このカテゴリを使ったカスタム記録があるため削除できません',
+  in_use: 'このカテゴリを使ったバイクログ記録があるため削除できません',
 }
 
 export default function CustomCategoryManagePage() {

@@ -3,10 +3,9 @@ import Layout from './components/Layout'
 import VehicleListPage from './pages/VehicleListPage'
 import VehicleFormPage from './pages/VehicleFormPage'
 import VehicleDetailPage from './pages/VehicleDetailPage'
-import MaintenanceFormPage from './pages/MaintenanceFormPage'
+import BikeLogFormPage from './pages/BikeLogFormPage'
 import FuelFormPage from './pages/FuelFormPage'
 import DeadlineFormPage from './pages/DeadlineFormPage'
-import CustomFormPage from './pages/CustomFormPage'
 import CustomCategoryManagePage from './pages/CustomCategoryManagePage'
 import RemindersPage from './pages/RemindersPage'
 import SettingsPage from './pages/SettingsPage'
@@ -21,16 +20,11 @@ function App() {
         <Route path="/vehicles/new" element={<VehicleFormPage />} />
         <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
         <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
-        <Route path="/vehicles/:id/maintenance/new" element={<MaintenanceFormPage />} />
-        <Route
-          path="/vehicles/:id/maintenance/:recordId/edit"
-          element={<MaintenanceFormPage />}
-        />
         <Route path="/vehicles/:id/fuel/new" element={<FuelFormPage />} />
         <Route path="/vehicles/:id/fuel/:fuelId/edit" element={<FuelFormPage />} />
-        <Route path="/vehicles/:id/custom/new" element={<CustomFormPage />} />
-        <Route path="/vehicles/:id/custom/:recordId/edit" element={<CustomFormPage />} />
-        <Route path="/vehicles/:id/custom/categories" element={<CustomCategoryManagePage />} />
+        <Route path="/vehicles/:id/bikelog/new" element={<BikeLogFormPage />} />
+        <Route path="/vehicles/:id/bikelog/:recordId/edit" element={<BikeLogFormPage />} />
+        <Route path="/vehicles/:id/bikelog/categories" element={<CustomCategoryManagePage />} />
         <Route path="/reminders" element={<RemindersPage />} />
         <Route path="/reminders/deadline/new" element={<DeadlineFormPage />} />
         <Route path="/reminders/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />

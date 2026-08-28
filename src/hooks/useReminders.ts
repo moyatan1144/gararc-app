@@ -1,28 +1,20 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import {
-  computeDeadlineReminders,
-  computeMaintenanceReminders,
-  isUrgent,
-  type Reminder,
-} from '../reminders'
-import { computeCustomReminders } from '../customRecords'
+import { computeDeadlineReminders, isUrgent, type Reminder } from '../reminders'
+import { computeBikeLogReminders } from '../bikeLog'
 
 export function useReminders() {
   const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
-  const maintenanceRecords = useLiveQuery(() => db.maintenanceRecords.toArray(), [])
-  const customRecords = useLiveQuery(() => db.customRecords.toArray(), [])
+  const bikeLogRecords = useLiveQuery(() => db.bikeLogRecords.toArray(), [])
   const deadlines = useLiveQuery(() => db.deadlines.toArray(), [])
 
-  const loading = !vehicles || !maintenanceRecords || !customRecords || !deadlines
+  const loading = !vehicles || !bikeLogRecords || !deadlines
 
   const reminders: Reminder[] = []
-  if (vehicles && maintenanceRecords && customRecords && deadlines) {
+  if (vehicles && bikeLogRecords && deadlines) {
     for (const vehicle of vehicles) {
-      const records = maintenanceRecords.filter((r) => r.vehicleId === vehicle.id)
-      reminders.push(...computeMaintenanceReminders(vehicle, records))
-      const customForVehicle = customRecords.filter((r) => r.vehicleId === vehicle.id)
-      reminders.push(...computeCustomReminders(vehicle, customForVehicle))
+      const records = bikeLogRecords.filter((r) => r.vehicleId === vehicle.id)
+      reminders.push(...computeBikeLogReminders(vehicle, records))
     }
     reminders.push(...computeDeadlineReminders(deadlines))
   }

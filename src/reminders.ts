@@ -1,17 +1,6 @@
-import type { Deadline, MaintenanceRecord, Vehicle } from './types'
-import type { CustomReminder } from './customRecords'
-import { daysBetween, addMonths } from './lib/dateUtils'
-
-export interface MaintenanceReminder {
-  kind: 'maintenance'
-  vehicleId: string
-  category: string
-  lastRecord: MaintenanceRecord
-  nextDueOdometer?: number
-  nextDueDate?: string
-  remainingKm?: number
-  remainingDays?: number
-}
+import type { Deadline } from './types'
+import type { BikeLogReminder } from './bikeLog'
+import { daysBetween } from './lib/dateUtils'
 
 export interface DeadlineReminder {
   kind: 'deadline'
@@ -20,51 +9,7 @@ export interface DeadlineReminder {
   remainingDays: number
 }
 
-export type Reminder = MaintenanceReminder | DeadlineReminder | CustomReminder
-
-export function computeMaintenanceReminders(
-  vehicle: Vehicle,
-  records: MaintenanceRecord[],
-): MaintenanceReminder[] {
-  const latestByCategory = new Map<string, MaintenanceRecord>()
-  for (const record of records) {
-    if (!record.intervalKm && !record.intervalMonths) continue
-    const current = latestByCategory.get(record.category)
-    // 作業日(date)を優先し、同日の場合は入力日時(createdAt)が新しい方を採用する
-    const isNewer =
-      !current ||
-      record.date > current.date ||
-      (record.date === current.date && record.createdAt > current.createdAt)
-    if (isNewer) {
-      latestByCategory.set(record.category, record)
-    }
-  }
-
-  const today = new Date().toISOString()
-
-  return Array.from(latestByCategory.values()).map((lastRecord) => {
-    const nextDueOdometer = lastRecord.intervalKm
-      ? lastRecord.odometer + lastRecord.intervalKm
-      : undefined
-    const nextDueDate = lastRecord.intervalMonths
-      ? addMonths(lastRecord.date, lastRecord.intervalMonths)
-      : undefined
-
-    return {
-      kind: 'maintenance',
-      vehicleId: vehicle.id,
-      category: lastRecord.category,
-      lastRecord,
-      nextDueOdometer,
-      nextDueDate,
-      remainingKm:
-        nextDueOdometer !== undefined
-          ? nextDueOdometer - vehicle.currentOdometer
-          : undefined,
-      remainingDays: nextDueDate ? daysBetween(today, nextDueDate) : undefined,
-    }
-  })
-}
+export type Reminder = DeadlineReminder | BikeLogReminder
 
 export function computeDeadlineReminders(deadlines: Deadline[]): DeadlineReminder[] {
   const today = new Date().toISOString()

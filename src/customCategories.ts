@@ -1,21 +1,28 @@
 import { db, newId, nowIso } from './db'
-import { DEFAULT_CUSTOM_CATEGORIES, OTHER_CUSTOM_CATEGORY } from './types'
+import { DEFAULT_CUSTOM_CATEGORIES, MAINTENANCE_CATEGORIES, OTHER_CUSTOM_CATEGORY } from './types'
 import { normalizeCategoryName } from './lib/textNormalize'
 
-// 初回起動時など、カテゴリが1件も無ければ初期セットを投入する。
+const ALL_DEFAULT_CATEGORIES = [...DEFAULT_CUSTOM_CATEGORIES, ...MAINTENANCE_CATEGORIES]
+
+// アプリ起動時に、初期セットのうちまだ登録されていないカテゴリを投入する。
+// (整備記録とカスタムの統合で、旧MAINTENANCE_CATEGORIESもここに合流させる)
 // React StrictModeの二重effect実行などで同時に2回呼ばれても、
 // name のユニーク制約により重複は作られない(片方は失敗するだけなので握りつぶす)。
 export async function ensureDefaultCategoriesSeeded(): Promise<void> {
-  const count = await db.customCategories.count()
-  if (count > 0) return
+  const existing = await db.customCategories.toArray()
+  const existingNames = new Set(existing.map((c) => normalizeCategoryName(c.name)))
+  const missingNames = [...new Set(ALL_DEFAULT_CATEGORIES.map(normalizeCategoryName))].filter(
+    (name) => !existingNames.has(name),
+  )
+  if (missingNames.length === 0) return
 
   const now = nowIso()
   try {
     await db.customCategories.bulkAdd(
-      DEFAULT_CUSTOM_CATEGORIES.map((name) => ({ id: newId(), name, createdAt: now })),
+      missingNames.map((name) => ({ id: newId(), name, createdAt: now })),
     )
   } catch {
-    // 既に別の呼び出しでシード済みなら無視してよい
+    // 既に別の呼び出しでシード済みなら無視してよい(StrictModeの二重effect実行など)
   }
 }
 
@@ -57,10 +64,10 @@ export async function renameCategory(
   if (await findDuplicate(name, id)) return { ok: false, error: 'duplicate' }
 
   const oldName = target.name
-  await db.transaction('rw', db.customCategories, db.customRecords, async () => {
+  await db.transaction('rw', db.customCategories, db.bikeLogRecords, async () => {
     await db.customCategories.update(id, { name })
     if (oldName !== name) {
-      await db.customRecords.where('category').equals(oldName).modify({ category: name })
+      await db.bikeLogRecords.where('category').equals(oldName).modify({ category: name })
     }
   })
   return { ok: true }
@@ -78,7 +85,7 @@ export async function deleteCategory(id: string): Promise<DeleteCategoryResult> 
   if (!target) return { ok: true }
   if (target.name === OTHER_CUSTOM_CATEGORY) return { ok: false, error: 'protected' }
 
-  const inUseCount = await db.customRecords.where('category').equals(target.name).count()
+  const inUseCount = await db.bikeLogRecords.where('category').equals(target.name).count()
   if (inUseCount > 0) return { ok: false, error: 'in_use' }
 
   await db.customCategories.delete(id)

@@ -4,18 +4,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
 import {
-  getCurrentCustomSpecs,
-  buildCustomHistory,
-  hasScheduleTag,
-  computeCustomReminders,
-  type CurrentCustomSpec,
-} from '../customRecords'
-import {
-  getCurrentMaintenanceStates,
-  buildMaintenanceHistory,
-  type CurrentMaintenanceState,
-} from '../maintenanceGrouping'
-import { isUrgent, computeMaintenanceReminders } from '../reminders'
+  getCurrentBikeLogSpecs,
+  buildBikeLogHistory,
+  computeBikeLogReminders,
+  type CurrentBikeLogSpec,
+} from '../bikeLog'
+import { isUrgent } from '../reminders'
+import { CUSTOM_TAGS } from '../types'
 import {
   buildLineShareUrl,
   buildVehicleShareUrl,
@@ -26,14 +21,21 @@ import BackHeader from '../components/BackHeader'
 
 type Tab = 'bikelog' | 'fuel'
 const TABS: Tab[] = ['bikelog', 'fuel']
-type LogView = 'scheduled' | 'unscheduled'
+
+type FilterChip = 'scheduled' | 'unscheduled' | `tag:${string}`
+
+const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
+  { key: 'scheduled', label: '期限あり' },
+  { key: 'unscheduled', label: '期限なし' },
+  ...CUSTOM_TAGS.map((tag) => ({ key: `tag:${tag}` as FilterChip, label: `#${tag}` })),
+]
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'bikelog'
-  const [logView, setLogView] = useState<LogView>('scheduled')
+  const [activeFilters, setActiveFilters] = useState<Set<FilterChip>>(new Set())
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [showManualShare, setShowManualShare] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -42,20 +44,25 @@ export default function VehicleDetailPage() {
     setSearchParams({ tab: next }, { replace: true })
   }
 
+  function toggleFilter(chip: FilterChip) {
+    setActiveFilters((prev) => {
+      const next = new Set(prev)
+      if (next.has(chip)) {
+        next.delete(chip)
+      } else {
+        next.add(chip)
+      }
+      return next
+    })
+  }
+
   const vehicle = useLiveQuery(() => (id ? db.vehicles.get(id) : undefined), [id])
-  const maintenanceRecords = useLiveQuery(
-    () =>
-      id
-        ? db.maintenanceRecords.where('vehicleId').equals(id).reverse().sortBy('date')
-        : [],
+  const bikeLogRecords = useLiveQuery(
+    () => (id ? db.bikeLogRecords.where('vehicleId').equals(id).toArray() : []),
     [id],
   )
   const fuelRecords = useLiveQuery(
     () => (id ? db.fuelRecords.where('vehicleId').equals(id).toArray() : []),
-    [id],
-  )
-  const customRecords = useLiveQuery(
-    () => (id ? db.customRecords.where('vehicleId').equals(id).toArray() : []),
     [id],
   )
 
@@ -64,21 +71,24 @@ export default function VehicleDetailPage() {
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
 
-  const customSpecs = customRecords ? getCurrentCustomSpecs(customRecords) : []
-  const scheduleSpecs = customSpecs.filter((s) => hasScheduleTag(s.latestRecord))
-  const nonScheduleSpecs = customSpecs.filter((s) => !hasScheduleTag(s.latestRecord))
-  const customReminderByCategory = new Map(
-    computeCustomReminders(vehicle, customRecords ?? []).map((r) => [r.category, r]),
+  const bikeLogSpecs = bikeLogRecords ? getCurrentBikeLogSpecs(bikeLogRecords) : []
+  const reminderByCategory = new Map(
+    computeBikeLogReminders(vehicle, bikeLogRecords ?? []).map((r) => [r.category, r]),
   )
 
-  const maintenanceStates = maintenanceRecords ? getCurrentMaintenanceStates(maintenanceRecords) : []
-  const scheduleMaintenance = maintenanceStates.filter((s) => s.isScheduled)
-  const nonScheduleMaintenance = maintenanceStates.filter((s) => !s.isScheduled)
-  const maintenanceReminderByCategory = new Map(
-    computeMaintenanceReminders(vehicle, maintenanceRecords ?? []).map((r) => [r.category, r]),
-  )
+  function matchesFilters(spec: CurrentBikeLogSpec): boolean {
+    if (activeFilters.size === 0) return true
+    return [...activeFilters].some((chip) => {
+      if (chip === 'scheduled') return spec.isScheduled
+      if (chip === 'unscheduled') return !spec.isScheduled
+      const tag = chip.slice(4)
+      return (spec.latestRecord.tags ?? []).includes(tag)
+    })
+  }
 
-  const shareUrl = buildVehicleShareUrl(vehicle, customSpecs)
+  const filteredSpecs = bikeLogSpecs.filter(matchesFilters)
+
+  const shareUrl = buildVehicleShareUrl(vehicle, bikeLogSpecs)
 
   async function handleShare() {
     if (!vehicle) return
@@ -101,17 +111,16 @@ export default function VehicleDetailPage() {
     }
   }
 
-  function renderCustomSpecRow(spec: CurrentCustomSpec) {
-    const key = `custom:${spec.category}`
-    const isOpen = expandedCategory === key
-    const categoryRecords = customRecords?.filter((r) => r.category === spec.category) ?? []
-    const history = isOpen ? buildCustomHistory(categoryRecords) : []
-    const reminder = customReminderByCategory.get(spec.category)
+  function renderBikeLogRow(spec: CurrentBikeLogSpec) {
+    const isOpen = expandedCategory === spec.category
+    const categoryRecords = bikeLogRecords?.filter((r) => r.category === spec.category) ?? []
+    const history = isOpen ? buildBikeLogHistory(categoryRecords) : []
+    const reminder = reminderByCategory.get(spec.category)
     const urgent = reminder ? isUrgent(reminder) : false
 
     return (
       <li
-        key={key}
+        key={spec.category}
         className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
       >
         <div className="flex justify-between items-start">
@@ -119,6 +128,7 @@ export default function VehicleDetailPage() {
             <div className="font-medium">{spec.category}</div>
             <div className="text-sm text-slate-500">
               {spec.content}
+              {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
               {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
             </div>
             {reminder && (
@@ -128,119 +138,36 @@ export default function VehicleDetailPage() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
-              className="text-sky-600 text-sm font-medium"
-            >
-              ＋更新
-            </Link>
-            <button
-              type="button"
-              onClick={() => setExpandedCategory(isOpen ? null : key)}
-              className="text-sky-600 text-sm"
-            >
-              {isOpen ? '閉じる' : '履歴'}
-            </button>
-          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
+          <Link
+            to={`/vehicles/${id}/bikelog/new?category=${encodeURIComponent(spec.category)}`}
+            className="text-sky-600 text-sm font-medium"
+          >
+            ＋更新
+          </Link>
+          <Link
+            to={`/vehicles/${id}/bikelog/${spec.latestRecord.id}/edit`}
+            className="text-sky-600 text-sm"
+          >
+            編集
+          </Link>
+          <button
+            type="button"
+            onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
+            className="text-sky-600 text-sm"
+          >
+            {isOpen ? '閉じる' : '履歴'}
+          </button>
         </div>
         {isOpen && (
           <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
             {history.map(({ record, before }) => (
-              <li
-                key={record.id}
-                className="text-sm text-slate-500 flex justify-between items-center gap-2"
-              >
-                <span>
-                  {record.date}
-                  {'　'}
-                  {before !== null ? `${before} → ${record.content}` : record.content}
-                  {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
-                </span>
-                <Link
-                  to={`/vehicles/${id}/custom/${record.id}/edit`}
-                  className="text-sky-600 flex-shrink-0"
-                >
-                  編集
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </li>
-    )
-  }
-
-  function renderMaintenanceCard(state: CurrentMaintenanceState) {
-    const key = `maintenance:${state.category}`
-    const isOpen = expandedCategory === key
-    const categoryRecords = maintenanceRecords?.filter((r) => r.category === state.category) ?? []
-    const history = isOpen ? buildMaintenanceHistory(categoryRecords) : []
-    const reminder = maintenanceReminderByCategory.get(state.category)
-    const urgent = reminder ? isUrgent(reminder) : false
-    const r = state.latestRecord
-
-    return (
-      <li
-        key={key}
-        className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="font-medium">{state.category}</div>
-            <div className="text-sm text-slate-500">
-              {r.title}
-              {r.brand && ` ・ ${r.brand}`}
-            </div>
-            <div className="text-sm text-slate-500">
-              {r.date} ・ {r.odometer.toLocaleString()} km
-              {r.cost !== undefined && ` ・ ¥${r.cost.toLocaleString()}`}
-            </div>
-            {reminder && (
-              <div className={`text-sm mt-0.5 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
-                {describeRemaining(reminder)}
-                {urgent && ' ・ 要注意'}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              to={`/vehicles/${id}/maintenance/new?category=${encodeURIComponent(state.category)}`}
-              className="text-sky-600 text-sm font-medium"
-            >
-              ＋更新
-            </Link>
-            <button
-              type="button"
-              onClick={() => setExpandedCategory(isOpen ? null : key)}
-              className="text-sky-600 text-sm"
-            >
-              {isOpen ? '閉じる' : '履歴'}
-            </button>
-          </div>
-        </div>
-        {isOpen && (
-          <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
-            {history.map((record) => (
-              <li
-                key={record.id}
-                className="text-sm text-slate-500 flex justify-between items-center gap-2"
-              >
-                <span>
-                  {record.date}
-                  {'　'}
-                  {record.title}
-                  {record.brand && ` ・ ${record.brand}`}
-                  {' ・ '}
-                  {record.odometer.toLocaleString()} km
-                  {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
-                </span>
-                <Link
-                  to={`/vehicles/${id}/maintenance/${record.id}/edit`}
-                  className="text-sky-600 flex-shrink-0"
-                >
-                  編集
-                </Link>
+              <li key={record.id} className="text-sm text-slate-500">
+                {record.date}
+                {'　'}
+                {before !== null ? `${before} → ${record.content}` : record.content}
+                {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
               </li>
             ))}
           </ul>
@@ -339,77 +266,40 @@ export default function VehicleDetailPage() {
 
       {tab === 'bikelog' && (
         <div>
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 text-xs">
-              <ViewToggleButton active={logView === 'scheduled'} onClick={() => setLogView('scheduled')}>
-                期限付き
-              </ViewToggleButton>
-              <ViewToggleButton active={logView === 'unscheduled'} onClick={() => setLogView('unscheduled')}>
-                期限なし
-              </ViewToggleButton>
-            </div>
-            <Link to={`/vehicles/${id}/custom/categories`} className="text-sky-600 text-xs">
+          <div className="flex justify-between items-center mb-2">
+            <Link to={`/vehicles/${id}/bikelog/new`} className="text-sky-600 text-sm font-medium">
+              + バイクログに追加
+            </Link>
+            <Link to={`/vehicles/${id}/bikelog/categories`} className="text-sky-600 text-xs">
               カテゴリ管理
             </Link>
           </div>
 
-          <div className="flex justify-end gap-4 -mt-1 mb-2">
-            <Link
-              to={`/vehicles/${id}/maintenance/new`}
-              className="text-sky-600 text-sm font-medium"
-            >
-              + 整備記録を追加
-            </Link>
-            <Link to={`/vehicles/${id}/custom/new`} className="text-sky-600 text-sm font-medium">
-              + カスタムを追加
-            </Link>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {FILTER_CHIPS.map((chip) => {
+              const active = activeFilters.has(chip.key)
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => toggleFilter(chip.key)}
+                  className={`rounded-full px-3 py-1 text-xs border ${
+                    active
+                      ? 'bg-sky-600 border-sky-600 text-white font-medium'
+                      : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              )
+            })}
           </div>
 
-          {logView === 'scheduled' ? (
-            <>
-              {scheduleMaintenance.length === 0 && scheduleSpecs.length === 0 && (
-                <Empty>期限付きの記録がありません</Empty>
-              )}
-              {scheduleMaintenance.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-slate-500 mb-1">🔧 整備記録</div>
-                  <ul className="flex flex-col gap-2 mb-4">
-                    {scheduleMaintenance.map((state) => renderMaintenanceCard(state))}
-                  </ul>
-                </>
-              )}
-              {scheduleSpecs.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-slate-500 mb-1">🧴 消耗品・カスタム</div>
-                  <ul className="flex flex-col gap-2">
-                    {scheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
-                  </ul>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {nonScheduleMaintenance.length === 0 && nonScheduleSpecs.length === 0 && (
-                <Empty>期限なしの記録がありません</Empty>
-              )}
-              {nonScheduleMaintenance.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-slate-500 mb-1">🔧 整備記録</div>
-                  <ul className="flex flex-col gap-2 mb-4">
-                    {nonScheduleMaintenance.map((state) => renderMaintenanceCard(state))}
-                  </ul>
-                </>
-              )}
-              {nonScheduleSpecs.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-slate-500 mb-1">✨ カスタム・装備品</div>
-                  <ul className="flex flex-col gap-2">
-                    {nonScheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
-                  </ul>
-                </>
-              )}
-            </>
+          {bikeLogSpecs.length === 0 && <Empty>まだバイクログの記録がありません</Empty>}
+          {bikeLogSpecs.length > 0 && filteredSpecs.length === 0 && (
+            <Empty>条件に一致する記録がありません</Empty>
           )}
+          <ul className="flex flex-col gap-2">{filteredSpecs.map((spec) => renderBikeLogRow(spec))}</ul>
         </div>
       )}
 
@@ -475,30 +365,6 @@ function TabButton({
     <button
       onClick={onClick}
       className={`flex-1 py-2 ${
-        active
-          ? 'bg-sky-600 text-white font-medium'
-          : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function ViewToggleButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-3 py-1.5 ${
         active
           ? 'bg-sky-600 text-white font-medium'
           : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'

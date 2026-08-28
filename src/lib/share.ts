@@ -1,5 +1,5 @@
 import type { Vehicle } from '../types'
-import type { CurrentCustomSpec } from '../customRecords'
+import type { CurrentBikeLogSpec } from '../bikeLog'
 import { buildSharePageUrl } from './shareLink'
 
 export type ShareResult = 'shared' | 'copied' | 'manual'
@@ -10,7 +10,7 @@ function buildShareCaption(vehicle: Vehicle): string {
 
 // 車両情報+現在のカスタム仕様一覧を、アプリ・ローカルデータを持たない相手でも
 // 開けるページのURLにまとめる(文字数制限のあるSNS投稿にはこのURLだけを載せる)。
-export function buildVehicleShareUrl(vehicle: Vehicle, specs: CurrentCustomSpec[]): string {
+export function buildVehicleShareUrl(vehicle: Vehicle, specs: CurrentBikeLogSpec[]): string {
   return buildSharePageUrl({
     name: vehicle.name,
     manufacturer: vehicle.manufacturer,

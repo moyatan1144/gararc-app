@@ -35,7 +35,7 @@ export default function SettingsPage() {
   async function handleExport() {
     const data = {
       vehicles: await db.vehicles.toArray(),
-      maintenanceRecords: await db.maintenanceRecords.toArray(),
+      bikeLogRecords: await db.bikeLogRecords.toArray(),
       fuelRecords: await db.fuelRecords.toArray(),
       deadlines: await db.deadlines.toArray(),
       exportedAt: new Date().toISOString(),

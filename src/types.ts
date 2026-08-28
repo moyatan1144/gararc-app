@@ -14,21 +14,6 @@ export interface Vehicle {
   updatedAt: string
 }
 
-export interface MaintenanceRecord {
-  id: string
-  vehicleId: string
-  category: string
-  title: string
-  brand?: string
-  date: string
-  odometer: number
-  cost?: number
-  memo?: string
-  intervalKm?: number
-  intervalMonths?: number
-  createdAt: string
-}
-
 export type MeterType = 'odometer' | 'trip'
 
 export interface FuelRecord {
@@ -69,20 +54,24 @@ export const MAINTENANCE_CATEGORIES = [
   'その他',
 ] as const
 
-// タグで「期日付き(消耗品交換/メンテナンス)」か「装備品/カスタム(期日なし)」かを仕分ける。
-// 複数選択可。期日系のタグが付いていて距離/期間間隔を設定した場合のみリマインダー対象になる。
+// タグはバイクログの分類・絞り込み用(期限あり/なしの判定には使わない。
+// 期限管理の対象かどうかは intervalKm/intervalMonths が設定されているかで決まる)。
+// 複数選択可。#消耗品交換・#メンテナンスを選ぶと登録画面で距離/期間間隔の入力欄が開く。
 export const CUSTOM_TAGS = ['消耗品交換', 'メンテナンス', 'カスタム', '装備品'] as const
 export type CustomTag = (typeof CUSTOM_TAGS)[number]
 export const SCHEDULE_CUSTOM_TAGS: CustomTag[] = ['消耗品交換', 'メンテナンス']
 
-// 1レコード = 1回の変更。カテゴリごとの最新レコードが「現在の仕様」になる
-// (現在仕様と履歴を別々に管理しない: src/customRecords.ts参照)
-export interface CustomRecord {
+// 1レコード = 1回の変更・作業。カテゴリごとの最新レコードが「現在の状態」になる
+// (現在の状態と履歴を別々に管理しない: src/bikeLog.ts参照)。
+// 整備記録・カスタム記録を統合した単一のレコード形式。
+export interface BikeLogRecord {
   id: string
   vehicleId: string
   category: string
   content: string
+  brand?: string
   cost?: number
+  memo?: string
   tags?: string[]
   odometer?: number
   intervalKm?: number

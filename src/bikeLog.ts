@@ -1,18 +1,19 @@
-import type { CustomRecord, Vehicle } from './types'
-import { SCHEDULE_CUSTOM_TAGS } from './types'
+import type { BikeLogRecord, Vehicle } from './types'
 import { daysBetween, addMonths } from './lib/dateUtils'
 
-export interface CurrentCustomSpec {
+export interface CurrentBikeLogSpec {
   category: string
   content: string
   cost?: number
-  latestRecord: CustomRecord
+  isScheduled: boolean
+  latestRecord: BikeLogRecord
 }
 
-// カテゴリごとに最新の1件を「現在の仕様」として抽出する。
-// (整備記録のリマインダー計算と同じ考え方: 作業日→同日ならcreatedAtで比較)
-export function getCurrentCustomSpecs(records: CustomRecord[]): CurrentCustomSpec[] {
-  const latestByCategory = new Map<string, CustomRecord>()
+// カテゴリごとに最新の1件を「現在の状態」として抽出する。
+// 距離/期間間隔が設定されていれば「期限あり」に分類する
+// (タグではなく、実際に間隔が設定されているかどうかで判定する)。
+export function getCurrentBikeLogSpecs(records: BikeLogRecord[]): CurrentBikeLogSpec[] {
+  const latestByCategory = new Map<string, BikeLogRecord>()
 
   for (const record of records) {
     const current = latestByCategory.get(record.category)
@@ -30,18 +31,14 @@ export function getCurrentCustomSpecs(records: CustomRecord[]): CurrentCustomSpe
       category: latestRecord.category,
       content: latestRecord.content,
       cost: latestRecord.cost,
+      isScheduled: Boolean(latestRecord.intervalKm || latestRecord.intervalMonths),
       latestRecord,
     }))
     .sort((a, b) => a.category.localeCompare(b.category, 'ja'))
 }
 
-// 現在の仕様のうち、#消耗品交換 / #メンテナンスタグが付いているもの(=期日管理の対象)
-export function hasScheduleTag(record: CustomRecord): boolean {
-  return (record.tags ?? []).some((t) => (SCHEDULE_CUSTOM_TAGS as string[]).includes(t))
-}
-
-export interface CustomHistoryEntry {
-  record: CustomRecord
+export interface BikeLogHistoryEntry {
+  record: BikeLogRecord
   // 最初の記録には前の記録が無い(=何だったかは分からない)ため null。
   // 「純正」等を勝手に補わず、登録された内容だけをそのまま表示する。
   before: string | null
@@ -49,7 +46,7 @@ export interface CustomHistoryEntry {
 
 // 同じカテゴリの記録を日付順に並べ、隣り合う記録同士で「変更前→変更後」を算出する。
 // 変更前の値は保存せずここで導出するため、ユーザーの二重入力を避けられる。
-export function buildCustomHistory(records: CustomRecord[]): CustomHistoryEntry[] {
+export function buildBikeLogHistory(records: BikeLogRecord[]): BikeLogHistoryEntry[] {
   const sorted = [...records].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? -1 : 1
     return a.createdAt < b.createdAt ? -1 : 1
@@ -61,23 +58,24 @@ export function buildCustomHistory(records: CustomRecord[]): CustomHistoryEntry[
   }))
 }
 
-export interface CustomReminder {
-  kind: 'custom'
+export interface BikeLogReminder {
+  kind: 'bikelog'
   vehicleId: string
   category: string
-  lastRecord: CustomRecord
+  lastRecord: BikeLogRecord
   nextDueOdometer?: number
   nextDueDate?: string
   remainingKm?: number
   remainingDays?: number
 }
 
-// #消耗品交換 / #メンテナンスタグが付き、距離/期間間隔が設定されているカスタム記録を
-// 整備記録と同じ考え方でリマインダー化する。
-export function computeCustomReminders(vehicle: Vehicle, records: CustomRecord[]): CustomReminder[] {
-  const latestByCategory = new Map<string, CustomRecord>()
+// 距離/期間間隔が設定されているバイクログ記録をリマインダー化する。
+export function computeBikeLogReminders(
+  vehicle: Vehicle,
+  records: BikeLogRecord[],
+): BikeLogReminder[] {
+  const latestByCategory = new Map<string, BikeLogRecord>()
   for (const record of records) {
-    if (!hasScheduleTag(record)) continue
     if (!record.intervalKm && !record.intervalMonths) continue
     const current = latestByCategory.get(record.category)
     const isNewer =
@@ -101,7 +99,7 @@ export function computeCustomReminders(vehicle: Vehicle, records: CustomRecord[]
       : undefined
 
     return {
-      kind: 'custom',
+      kind: 'bikelog',
       vehicleId: vehicle.id,
       category: lastRecord.category,
       lastRecord,

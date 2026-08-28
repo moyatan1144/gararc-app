@@ -28,7 +28,7 @@ export default function RemindersPage() {
 
         {sorted.length === 0 && (
           <div className="text-center text-slate-500 mt-8 text-sm">
-            整備記録・カスタムに交換間隔を設定するか、車検・保険の期限を登録すると
+            バイクログに交換間隔を設定するか、車検・保険の期限を登録すると
             <br />
             ここにリマインダーが表示されます。
           </div>
@@ -117,7 +117,7 @@ export default function RemindersPage() {
 
 function reminderLink(r: Reminder): string {
   if (r.kind === 'deadline') return `/reminders/deadline/${r.deadline.id}/edit`
-  return `/vehicles/${r.vehicleId}?tab=bikelog`
+  return `/vehicles/${r.vehicleId}/bikelog/${r.lastRecord.id}/edit`
 }
 
 function reminderLabel(r: Reminder): string {
