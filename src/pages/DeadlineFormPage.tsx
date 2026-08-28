@@ -21,6 +21,7 @@ export default function DeadlineFormPage() {
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [notifyBeforeDays, setNotifyBeforeDays] = useState('30')
+  const [memo, setMemo] = useState('')
   const [loaded, setLoaded] = useState(!isEdit)
 
   if (isEdit && existing && !loaded) {
@@ -28,6 +29,7 @@ export default function DeadlineFormPage() {
     setLabel(existing.label === existing.type ? '' : existing.label)
     setDueDate(existing.dueDate)
     setNotifyBeforeDays(String(existing.notifyBeforeDays))
+    setMemo(existing.memo ?? '')
     setLoaded(true)
   }
 
@@ -42,6 +44,7 @@ export default function DeadlineFormPage() {
       label: label || type,
       dueDate,
       notifyBeforeDays: Number(notifyBeforeDays) || 30,
+      memo: memo || undefined,
     }
 
     if (isEdit && deadlineId) {
@@ -100,6 +103,15 @@ export default function DeadlineFormPage() {
             value={notifyBeforeDays}
             onChange={(e) => setNotifyBeforeDays(e.target.value)}
             className="input"
+          />
+        </Field>
+        <Field label="メモ（任意・証券番号など）">
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            className="input"
+            rows={3}
+            placeholder="例: 証券番号、連絡先、更新条件など"
           />
         </Field>
 

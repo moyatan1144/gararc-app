@@ -54,6 +54,7 @@ export interface Deadline {
   label: string
   dueDate: string
   notifyBeforeDays: number
+  memo?: string
   createdAt: string
 }
 

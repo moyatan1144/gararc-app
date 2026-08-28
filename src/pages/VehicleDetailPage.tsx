@@ -273,6 +273,9 @@ export default function VehicleDetailPage() {
                     </Link>
                   </div>
                 </div>
+                {d.memo && (
+                  <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">{d.memo}</div>
+                )}
               </li>
             ))}
           </ul>
