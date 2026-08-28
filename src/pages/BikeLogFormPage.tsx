@@ -4,11 +4,20 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { OTHER_CUSTOM_CATEGORY, CUSTOM_TAGS, SCHEDULE_CUSTOM_TAGS } from '../types'
 import { buildBikeLogHistory } from '../bikeLog'
+import { compareJaGojuon } from '../lib/textNormalize'
 import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 import DecimalInput from '../components/DecimalInput'
 
+// recordIdが変わっても(履歴の別記録をクリックした場合など)同じルートのままだと
+// コンポーネントが再マウントされずフォームの中身が更新されないため、
+// recordIdをkeyにして強制的に再マウントさせる。
 export default function BikeLogFormPage() {
+  const { recordId } = useParams<{ recordId?: string }>()
+  return <BikeLogFormInner key={recordId ?? 'new'} />
+}
+
+function BikeLogFormInner() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
   const isEdit = Boolean(recordId)
   const navigate = useNavigate()
@@ -20,7 +29,7 @@ export default function BikeLogFormPage() {
   const sortedCategories = [...(categories ?? [])].sort((a, b) => {
     if (a.name === OTHER_CUSTOM_CATEGORY) return 1
     if (b.name === OTHER_CUSTOM_CATEGORY) return -1
-    return a.name.localeCompare(b.name, 'ja')
+    return compareJaGojuon(a.name, b.name)
   })
 
   const vehicle = useLiveQuery(
@@ -272,7 +281,7 @@ export default function BikeLogFormPage() {
       </form>
 
       {isEdit && (
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">{historyCategory}の履歴</h2>
             <ConfirmDeleteButton
@@ -281,14 +290,21 @@ export default function BikeLogFormPage() {
               confirmMessage={`「${historyCategory}」の記録を全て削除します。履歴も含めて元に戻せません。よろしいですか？`}
             />
           </div>
-          <ul className="flex flex-col gap-2">
-            {history.map(({ record, before }) => (
-              <li key={record.id} className="card">
+          <p className="text-xs text-slate-500">記録を選ぶと編集できます</p>
+          <ul className="flex flex-col gap-1.5">
+            {history.map((record) => (
+              <li
+                key={record.id}
+                className={`card-compact ${record.id === recordId ? 'border-sky-400 dark:border-sky-600' : ''}`}
+              >
                 <div className="flex justify-between items-start gap-2">
-                  <div className="text-sm">
+                  <Link
+                    to={`/vehicles/${vehicleId}/bikelog/${record.id}/edit`}
+                    className="text-sm min-w-0 flex-1"
+                  >
                     <div className="text-slate-500">{record.date}</div>
                     <div>
-                      {before !== null ? `${before} → ${record.content}` : record.content}
+                      {record.content}
                       {record.brand && ` ・ ${record.brand}`}
                     </div>
                     <div className="text-slate-500">
@@ -296,12 +312,10 @@ export default function BikeLogFormPage() {
                       {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
                     </div>
                     {record.memo && <div className="text-slate-500 mt-1">{record.memo}</div>}
-                  </div>
-                </div>
-                <div className="mt-2 flex justify-end">
+                  </Link>
                   <ConfirmDeleteButton
                     onConfirm={() => handleDeleteRecord(record.id)}
-                    label="この記録を削除"
+                    label="削除"
                     confirmMessage="この記録を削除します。よろしいですか？"
                   />
                 </div>
@@ -316,7 +330,7 @@ export default function BikeLogFormPage() {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-sm flex-1 min-w-0">
       <span className="text-slate-600 dark:text-slate-400">{label}</span>
       {children}
     </label>

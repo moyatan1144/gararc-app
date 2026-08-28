@@ -37,25 +37,12 @@ export function getCurrentBikeLogSpecs(records: BikeLogRecord[]): CurrentBikeLog
     .sort((a, b) => a.category.localeCompare(b.category, 'ja'))
 }
 
-export interface BikeLogHistoryEntry {
-  record: BikeLogRecord
-  // 最初の記録には前の記録が無い(=何だったかは分からない)ため null。
-  // 「純正」等を勝手に補わず、登録された内容だけをそのまま表示する。
-  before: string | null
-}
-
-// 同じカテゴリの記録を日付順に並べ、隣り合う記録同士で「変更前→変更後」を算出する。
-// 変更前の値は保存せずここで導出するため、ユーザーの二重入力を避けられる。
-export function buildBikeLogHistory(records: BikeLogRecord[]): BikeLogHistoryEntry[] {
-  const sorted = [...records].sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? -1 : 1
-    return a.createdAt < b.createdAt ? -1 : 1
+// 同じカテゴリの記録を新しい順に並べる。
+export function buildBikeLogHistory(records: BikeLogRecord[]): BikeLogRecord[] {
+  return [...records].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1
+    return a.createdAt < b.createdAt ? 1 : -1
   })
-
-  return sorted.map((record, i) => ({
-    record,
-    before: i === 0 ? null : sorted[i - 1].content,
-  }))
 }
 
 export interface BikeLogReminder {

@@ -60,3 +60,60 @@ export function normalizeCategoryName(input: string): string {
   s = s.replace(/[\s　]/g, '')
   return s
 }
+
+// 五十音順(あ→ん、濁音/半濁音は清音の直後)での比較に使う並び順。
+// Intl.localeCompare('ja')は環境によって濁音の並びが辞書順と一致しないため、
+// 独自に並び替えキーを用意する。
+const GOJUON_ORDER =
+  'あぁいぃうぅゔえぇおぉかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをん'
+
+const GOJUON_INDEX = new Map<string, number>()
+for (let i = 0; i < GOJUON_ORDER.length; i++) {
+  GOJUON_INDEX.set(GOJUON_ORDER[i], i)
+}
+
+function toHiragana(char: string): string {
+  const code = char.codePointAt(0)
+  if (code !== undefined && code >= 0x30a1 && code <= 0x30f6) {
+    return String.fromCodePoint(code - 0x60)
+  }
+  return char
+}
+
+// 文字列を五十音順の比較キー列に変換する。長音符(ー)は直前の文字と
+// 同じ並び順として扱う(例: 「マフラー」のーは「マフラア」寄りに扱われる)。
+function gojuonKeys(input: string): number[] {
+  const keys: number[] = []
+  let lastKey = 0
+  for (const ch of input) {
+    const hira = toHiragana(ch)
+    if (hira === 'ー') {
+      keys.push(lastKey)
+      continue
+    }
+    const idx = GOJUON_INDEX.get(hira)
+    if (idx !== undefined) {
+      keys.push(idx)
+      lastKey = idx
+    } else {
+      // かな以外(漢字・英数字等)は五十音より後ろに配置する
+      const code = GOJUON_ORDER.length + (ch.codePointAt(0) ?? 0)
+      keys.push(code)
+      lastKey = code
+    }
+  }
+  return keys
+}
+
+// カテゴリ名などを五十音順に比較する。
+export function compareJaGojuon(a: string, b: string): number {
+  const keysA = gojuonKeys(a)
+  const keysB = gojuonKeys(b)
+  const len = Math.max(keysA.length, keysB.length)
+  for (let i = 0; i < len; i++) {
+    const ka = keysA[i] ?? -1
+    const kb = keysB[i] ?? -1
+    if (ka !== kb) return ka - kb
+  }
+  return a.localeCompare(b, 'ja')
+}

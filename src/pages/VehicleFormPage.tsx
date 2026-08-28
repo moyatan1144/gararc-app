@@ -230,7 +230,7 @@ export default function VehicleFormPage() {
             onChange={(e) => setSpecNotes(e.target.value)}
             className="input"
             rows={4}
-            placeholder="例: 次回の点検予定、気になっている箇所など自由にメモ"
+            placeholder="例: 保管場所、任意保険の連絡先、気になる症状など自由にメモ"
           />
           <span className="text-xs text-slate-500">
             マフラーやミラーなどのカスタム内容は「バイクログ」タブで記録できます。
@@ -255,7 +255,7 @@ export default function VehicleFormPage() {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm flex-1">
+    <label className="flex flex-col gap-1 text-sm flex-1 min-w-0">
       <span className="text-slate-600 dark:text-slate-400">{label}</span>
       {children}
     </label>

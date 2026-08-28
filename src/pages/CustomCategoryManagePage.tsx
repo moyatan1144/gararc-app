@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { OTHER_CUSTOM_CATEGORY } from '../types'
 import { addCategory, deleteCategory, renameCategory } from '../customCategories'
+import { compareJaGojuon } from '../lib/textNormalize'
 import BackHeader from '../components/BackHeader'
 
 const ERROR_MESSAGES = {
@@ -29,7 +30,7 @@ export default function CustomCategoryManagePage() {
   const sorted = [...(categories ?? [])].sort((a, b) => {
     if (a.name === OTHER_CUSTOM_CATEGORY) return 1
     if (b.name === OTHER_CUSTOM_CATEGORY) return -1
-    return a.name.localeCompare(b.name, 'ja')
+    return compareJaGojuon(a.name, b.name)
   })
 
   async function handleAdd(e: FormEvent) {

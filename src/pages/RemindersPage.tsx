@@ -40,7 +40,7 @@ export default function RemindersPage() {
             const urgent = isUrgent(reminder)
             return (
               <li key={i}>
-                <Link to={reminderLink(reminder)} className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}>
+                <Link to={reminderLink(reminder)} className={`card-compact block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}>
                   <div className="flex justify-between">
                     <span className="font-medium">
                       {vehicle?.name} ・ {reminderLabel(reminder)}

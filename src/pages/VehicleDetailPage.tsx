@@ -78,7 +78,7 @@ export default function VehicleDetailPage() {
 
   function matchesFilters(spec: CurrentBikeLogSpec): boolean {
     if (activeFilters.size === 0) return true
-    return [...activeFilters].some((chip) => {
+    return [...activeFilters].every((chip) => {
       if (chip === 'scheduled') return spec.isScheduled
       if (chip === 'unscheduled') return !spec.isScheduled
       const tag = chip.slice(4)
@@ -121,7 +121,7 @@ export default function VehicleDetailPage() {
     return (
       <li
         key={spec.category}
-        className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+        className={`card-compact ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
       >
         <div className="flex justify-between items-start">
           <div>
@@ -162,11 +162,11 @@ export default function VehicleDetailPage() {
         </div>
         {isOpen && (
           <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
-            {history.map(({ record, before }) => (
+            {history.map((record) => (
               <li key={record.id} className="text-sm text-slate-500">
                 {record.date}
                 {'　'}
-                {before !== null ? `${before} → ${record.content}` : record.content}
+                {record.content}
                 {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
               </li>
             ))}
@@ -207,12 +207,6 @@ export default function VehicleDetailPage() {
           {vehicle.specNotes && (
             <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
           )}
-          <Link
-            to={`/vehicles/${id}?tab=bikelog`}
-            className="inline-block text-sky-600 text-sm mt-2"
-          >
-            → バイクログを見る
-          </Link>
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <button onClick={handleShare} className="text-sky-600 text-sm">
               🔗 共有
