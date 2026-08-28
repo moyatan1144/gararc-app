@@ -3,7 +3,7 @@ import { useReminders } from '../hooks/useReminders'
 import { isUrgent, type Reminder } from '../reminders'
 
 export default function RemindersPage() {
-  const { loading, reminders, vehicles } = useReminders()
+  const { loading, reminders, deadlines, vehicles } = useReminders()
 
   if (loading) {
     return <div className="p-4 text-slate-500">読み込み中...</div>
@@ -11,44 +11,90 @@ export default function RemindersPage() {
 
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
   const sorted = [...reminders].sort((a, b) => remainingValue(a) - remainingValue(b))
+  const deadlinesByDate = [...deadlines].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">リマインダー</h1>
+    <div className="p-4 flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-bold mb-4">リマインダー</h1>
 
-      {sorted.length === 0 && (
-        <div className="text-center text-slate-500 mt-16 text-sm">
-          整備記録に交換間隔を設定するか、車検・保険の期限を登録すると
-          <br />
-          ここにリマインダーが表示されます。
+        {sorted.length === 0 && (
+          <div className="text-center text-slate-500 mt-8 text-sm">
+            整備記録・カスタムに交換間隔を設定するか、車検・保険の期限を登録すると
+            <br />
+            ここにリマインダーが表示されます。
+          </div>
+        )}
+
+        <ul className="flex flex-col gap-2">
+          {sorted.map((reminder, i) => {
+            const vehicle = vehicleById.get(reminder.vehicleId)
+            const urgent = isUrgent(reminder)
+            return (
+              <li key={i}>
+                <Link to={reminderLink(reminder)} className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}>
+                  <div className="flex justify-between">
+                    <span className="font-medium">
+                      {vehicle?.name} ・ {reminderLabel(reminder)}
+                    </span>
+                    {urgent && <span className="text-red-600 text-xs font-semibold">要注意</span>}
+                  </div>
+                  <div className="text-sm text-slate-500 mt-1">{describe(reminder)}</div>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-bold">期限一覧</h2>
+          <Link to="/reminders/deadline/new" className="text-sky-600 text-sm font-medium">
+            + 期限を追加
+          </Link>
         </div>
-      )}
 
-      <ul className="flex flex-col gap-2">
-        {sorted.map((reminder, i) => {
-          const vehicle = vehicleById.get(reminder.vehicleId)
-          const urgent = isUrgent(reminder)
-          return (
-            <li key={i}>
-              <Link
-                to={`/vehicles/${reminder.vehicleId}?tab=${reminder.kind === 'deadline' ? 'deadline' : 'maintenance'}`}
-                className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
-              >
-                <div className="flex justify-between">
-                  <span className="font-medium">
-                    {vehicle?.name} ・{' '}
-                    {reminder.kind === 'maintenance' ? reminder.category : reminder.deadline.type}
-                  </span>
-                  {urgent && <span className="text-red-600 text-xs font-semibold">要注意</span>}
-                </div>
-                <div className="text-sm text-slate-500 mt-1">{describe(reminder)}</div>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+        {deadlinesByDate.length === 0 && (
+          <div className="text-center text-slate-500 py-8 text-sm">
+            まだ期限が登録されていません。
+          </div>
+        )}
+
+        <ul className="flex flex-col gap-2">
+          {deadlinesByDate.map((d) => {
+            const vehicle = vehicleById.get(d.vehicleId)
+            return (
+              <li key={d.id}>
+                <Link to={`/reminders/deadline/${d.id}/edit`} className="card block">
+                  <div className="flex justify-between items-start">
+                    <span className="font-medium">
+                      {vehicle?.name} ・ {d.type} ・ {d.label}
+                    </span>
+                    <span className="text-sm text-slate-500 flex-shrink-0">{d.dueDate}</span>
+                  </div>
+                  {d.memo && (
+                    <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">{d.memo}</div>
+                  )}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </div>
   )
+}
+
+function reminderLink(r: Reminder): string {
+  if (r.kind === 'deadline') return `/reminders/deadline/${r.deadline.id}/edit`
+  if (r.kind === 'custom') return `/vehicles/${r.vehicleId}?tab=custom`
+  return `/vehicles/${r.vehicleId}?tab=maintenance`
+}
+
+function reminderLabel(r: Reminder): string {
+  if (r.kind === 'deadline') return r.deadline.type
+  return r.category
 }
 
 function remainingValue(r: Reminder): number {

@@ -7,16 +7,23 @@ import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 const TYPES: DeadlineType[] = ['車検', '任意保険', '自賠責保険', 'その他']
+const backTo = '/reminders'
 
 export default function DeadlineFormPage() {
-  const { id: vehicleId, deadlineId } = useParams<{ id: string; deadlineId?: string }>()
+  const { deadlineId } = useParams<{ deadlineId?: string }>()
   const isEdit = Boolean(deadlineId)
   const navigate = useNavigate()
   const existing = useLiveQuery(
     () => (deadlineId ? db.deadlines.get(deadlineId) : undefined),
     [deadlineId],
   )
+  const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
+  const existingVehicle = useLiveQuery(
+    () => (existing ? db.vehicles.get(existing.vehicleId) : undefined),
+    [existing],
+  )
 
+  const [vehicleId, setVehicleId] = useState('')
   const [type, setType] = useState<DeadlineType>('車検')
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -25,6 +32,7 @@ export default function DeadlineFormPage() {
   const [loaded, setLoaded] = useState(!isEdit)
 
   if (isEdit && existing && !loaded) {
+    setVehicleId(existing.vehicleId)
     setType(existing.type)
     setLabel(existing.label === existing.type ? '' : existing.label)
     setDueDate(existing.dueDate)
@@ -33,13 +41,12 @@ export default function DeadlineFormPage() {
     setLoaded(true)
   }
 
-  const backTo = `/vehicles/${vehicleId}?tab=deadline`
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!vehicleId) return
 
     const fields = {
+      vehicleId,
       type,
       label: label || type,
       dueDate,
@@ -50,7 +57,7 @@ export default function DeadlineFormPage() {
     if (isEdit && deadlineId) {
       await db.deadlines.update(deadlineId, fields)
     } else {
-      await db.deadlines.add({ id: newId(), vehicleId, ...fields, createdAt: nowIso() })
+      await db.deadlines.add({ id: newId(), ...fields, createdAt: nowIso() })
     }
 
     navigate(backTo)
@@ -66,6 +73,29 @@ export default function DeadlineFormPage() {
     <div className="p-4">
       <BackHeader title={isEdit ? '期限を編集' : '期限を追加'} to={backTo} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="車両">
+          {isEdit ? (
+            <div className="input bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {existingVehicle?.name ?? '読み込み中...'}
+            </div>
+          ) : (
+            <select
+              required
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              className="input"
+            >
+              <option value="" disabled>
+                選択してください
+              </option>
+              {vehicles?.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
         <Field label="種類">
           <select
             value={type}

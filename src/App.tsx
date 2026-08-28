@@ -28,12 +28,12 @@ function App() {
         />
         <Route path="/vehicles/:id/fuel/new" element={<FuelFormPage />} />
         <Route path="/vehicles/:id/fuel/:fuelId/edit" element={<FuelFormPage />} />
-        <Route path="/vehicles/:id/deadline/new" element={<DeadlineFormPage />} />
-        <Route path="/vehicles/:id/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
         <Route path="/vehicles/:id/custom/new" element={<CustomFormPage />} />
         <Route path="/vehicles/:id/custom/:recordId/edit" element={<CustomFormPage />} />
         <Route path="/vehicles/:id/custom/categories" element={<CustomCategoryManagePage />} />
         <Route path="/reminders" element={<RemindersPage />} />
+        <Route path="/reminders/deadline/new" element={<DeadlineFormPage />} />
+        <Route path="/reminders/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>

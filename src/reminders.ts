@@ -1,4 +1,6 @@
 import type { Deadline, MaintenanceRecord, Vehicle } from './types'
+import type { CustomReminder } from './customRecords'
+import { daysBetween, addMonths } from './lib/dateUtils'
 
 export interface MaintenanceReminder {
   kind: 'maintenance'
@@ -18,13 +20,7 @@ export interface DeadlineReminder {
   remainingDays: number
 }
 
-export type Reminder = MaintenanceReminder | DeadlineReminder
-
-function daysBetween(fromIso: string, toIso: string): number {
-  const from = new Date(fromIso)
-  const to = new Date(toIso)
-  return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
-}
+export type Reminder = MaintenanceReminder | DeadlineReminder | CustomReminder
 
 export function computeMaintenanceReminders(
   vehicle: Vehicle,
@@ -78,12 +74,6 @@ export function computeDeadlineReminders(deadlines: Deadline[]): DeadlineReminde
     deadline,
     remainingDays: daysBetween(today, deadline.dueDate),
   }))
-}
-
-function addMonths(dateIso: string, months: number): string {
-  const d = new Date(dateIso)
-  d.setMonth(d.getMonth() + months)
-  return d.toISOString().slice(0, 10)
 }
 
 export function isUrgent(reminder: Reminder): boolean {

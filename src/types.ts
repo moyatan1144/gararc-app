@@ -69,6 +69,12 @@ export const MAINTENANCE_CATEGORIES = [
   'その他',
 ] as const
 
+// タグで「期日付き(消耗品交換/メンテナンス)」か「装備品/カスタム(期日なし)」かを仕分ける。
+// 複数選択可。期日系のタグが付いていて距離/期間間隔を設定した場合のみリマインダー対象になる。
+export const CUSTOM_TAGS = ['消耗品交換', 'メンテナンス', 'カスタム', '装備品'] as const
+export type CustomTag = (typeof CUSTOM_TAGS)[number]
+export const SCHEDULE_CUSTOM_TAGS: CustomTag[] = ['消耗品交換', 'メンテナンス']
+
 // 1レコード = 1回の変更。カテゴリごとの最新レコードが「現在の仕様」になる
 // (現在仕様と履歴を別々に管理しない: src/customRecords.ts参照)
 export interface CustomRecord {
@@ -77,6 +83,10 @@ export interface CustomRecord {
   category: string
   content: string
   cost?: number
+  tags?: string[]
+  odometer?: number
+  intervalKm?: number
+  intervalMonths?: number
   date: string
   createdAt: string
 }

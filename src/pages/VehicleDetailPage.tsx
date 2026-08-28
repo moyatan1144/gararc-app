@@ -3,7 +3,15 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { computeFuelStats, averageKmPerLiter } from '../fuelStats'
-import { getCurrentCustomSpecs, buildCustomHistory } from '../customRecords'
+import {
+  getCurrentCustomSpecs,
+  buildCustomHistory,
+  hasScheduleTag,
+  computeCustomReminders,
+  type CurrentCustomSpec,
+  type CustomReminder,
+} from '../customRecords'
+import { isUrgent } from '../reminders'
 import {
   buildLineShareUrl,
   buildVehicleShareUrl,
@@ -12,8 +20,8 @@ import {
 } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
-type Tab = 'maintenance' | 'fuel' | 'deadline' | 'custom'
-const TABS: Tab[] = ['maintenance', 'fuel', 'deadline', 'custom']
+type Tab = 'maintenance' | 'fuel' | 'custom'
+const TABS: Tab[] = ['maintenance', 'fuel', 'custom']
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -40,10 +48,6 @@ export default function VehicleDetailPage() {
     () => (id ? db.fuelRecords.where('vehicleId').equals(id).toArray() : []),
     [id],
   )
-  const deadlines = useLiveQuery(
-    () => (id ? db.deadlines.where('vehicleId').equals(id).sortBy('dueDate') : []),
-    [id],
-  )
   const customRecords = useLiveQuery(
     () => (id ? db.customRecords.where('vehicleId').equals(id).toArray() : []),
     [id],
@@ -54,6 +58,11 @@ export default function VehicleDetailPage() {
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
   const customSpecs = customRecords ? getCurrentCustomSpecs(customRecords) : []
+  const scheduleSpecs = customSpecs.filter((s) => hasScheduleTag(s.latestRecord))
+  const nonScheduleSpecs = customSpecs.filter((s) => !hasScheduleTag(s.latestRecord))
+  const customReminderByCategory = new Map(
+    computeCustomReminders(vehicle, customRecords ?? []).map((r) => [r.category, r]),
+  )
   const shareUrl = buildVehicleShareUrl(vehicle, customSpecs)
 
   async function handleShare() {
@@ -75,6 +84,75 @@ export default function VehicleDetailPage() {
       // 自動共有・自動コピーができない環境向けに、手動コピーの手段を出す
       setShowManualShare(true)
     }
+  }
+
+  function renderCustomSpecRow(spec: CurrentCustomSpec) {
+    const isOpen = expandedCategory === spec.category
+    const categoryRecords = customRecords?.filter((r) => r.category === spec.category) ?? []
+    const history = isOpen ? buildCustomHistory(categoryRecords) : []
+    const reminder = customReminderByCategory.get(spec.category)
+    const urgent = reminder ? isUrgent(reminder) : false
+
+    return (
+      <li
+        key={spec.category}
+        className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-medium">{spec.category}</div>
+            <div className="text-sm text-slate-500">
+              {spec.content}
+              {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
+            </div>
+            {reminder && (
+              <div className={`text-sm mt-0.5 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
+                {describeCustomRemaining(reminder)}
+                {urgent && ' ・ 要注意'}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
+              className="text-sky-600 text-sm font-medium"
+            >
+              ＋更新
+            </Link>
+            <button
+              type="button"
+              onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
+              className="text-sky-600 text-sm"
+            >
+              {isOpen ? '閉じる' : '履歴'}
+            </button>
+          </div>
+        </div>
+        {isOpen && (
+          <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
+            {history.map(({ record, before }) => (
+              <li
+                key={record.id}
+                className="text-sm text-slate-500 flex justify-between items-center gap-2"
+              >
+                <span>
+                  {record.date}
+                  {'　'}
+                  {before !== null ? `${before} → ${record.content}` : record.content}
+                  {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
+                </span>
+                <Link
+                  to={`/vehicles/${id}/custom/${record.id}/edit`}
+                  className="text-sky-600 flex-shrink-0"
+                >
+                  編集
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    )
   }
 
   return (
@@ -163,9 +241,6 @@ export default function VehicleDetailPage() {
         <TabButton active={tab === 'fuel'} onClick={() => setTab('fuel')}>
           給油記録
         </TabButton>
-        <TabButton active={tab === 'deadline'} onClick={() => setTab('deadline')}>
-          期限
-        </TabButton>
         <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
           カスタム
         </TabButton>
@@ -253,35 +328,6 @@ export default function VehicleDetailPage() {
         </Section>
       )}
 
-      {tab === 'deadline' && (
-        <Section addLabel="+ 期限を追加" addTo={`/vehicles/${id}/deadline/new`}>
-          {deadlines?.length === 0 && <Empty>まだ期限が登録されていません</Empty>}
-          <ul className="flex flex-col gap-2">
-            {deadlines?.map((d) => (
-              <li key={d.id} className="card">
-                <div className="flex justify-between items-start">
-                  <span className="font-medium">
-                    {d.type} ・ {d.label}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-500">{d.dueDate}</span>
-                    <Link
-                      to={`/vehicles/${id}/deadline/${d.id}/edit`}
-                      className="text-sky-600 text-sm"
-                    >
-                      編集
-                    </Link>
-                  </div>
-                </div>
-                {d.memo && (
-                  <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">{d.memo}</div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
       {tab === 'custom' && (
         <Section addLabel="+ カスタムを追加" addTo={`/vehicles/${id}/custom/new`}>
           <div className="flex justify-end -mt-1 mb-2">
@@ -290,63 +336,26 @@ export default function VehicleDetailPage() {
             </Link>
           </div>
           {customSpecs.length === 0 && <Empty>まだカスタム記録がありません</Empty>}
-          <ul className="flex flex-col gap-2">
-            {customSpecs.map((spec) => {
-              const isOpen = expandedCategory === spec.category
-              const categoryRecords =
-                customRecords?.filter((r) => r.category === spec.category) ?? []
-              const history = isOpen ? buildCustomHistory(categoryRecords) : []
-              return (
-                <li key={spec.category} className="card">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{spec.category}</div>
-                      <div className="text-sm text-slate-500">
-                        {spec.content}
-                        {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Link
-                        to={`/vehicles/${id}/custom/new?category=${encodeURIComponent(spec.category)}`}
-                        className="text-sky-600 text-sm font-medium"
-                      >
-                        ＋更新
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
-                        className="text-sky-600 text-sm"
-                      >
-                        {isOpen ? '閉じる' : '履歴'}
-                      </button>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
-                      {history.map(({ record, before }) => (
-                        <li
-                          key={record.id}
-                          className="text-sm text-slate-500 flex justify-between items-center gap-2"
-                        >
-                          <span>
-                            {record.date}　{before !== null ? `${before} → ${record.content}` : record.content}
-                            {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
-                          </span>
-                          <Link
-                            to={`/vehicles/${id}/custom/${record.id}/edit`}
-                            className="text-sky-600 flex-shrink-0"
-                          >
-                            編集
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+
+          {scheduleSpecs.length > 0 && (
+            <>
+              <div className="text-sm font-medium text-slate-500 mb-1">
+                🔧 メンテナンス予定のあるパーツ
+              </div>
+              <ul className="flex flex-col gap-2 mb-4">
+                {scheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
+              </ul>
+            </>
+          )}
+
+          {nonScheduleSpecs.length > 0 && (
+            <>
+              <div className="text-sm font-medium text-slate-500 mb-1">✨ カスタム・装備品</div>
+              <ul className="flex flex-col gap-2">
+                {nonScheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
+              </ul>
+            </>
+          )}
         </Section>
       )}
     </div>
@@ -399,4 +408,21 @@ function Section({
 
 function Empty({ children }: { children: ReactNode }) {
   return <div className="text-center text-slate-500 text-sm py-8">{children}</div>
+}
+
+function describeCustomRemaining(r: CustomReminder): string {
+  const parts: string[] = []
+  if (r.remainingKm !== undefined) {
+    parts.push(
+      r.remainingKm >= 0
+        ? `あと${r.remainingKm.toLocaleString()}km`
+        : `${Math.abs(r.remainingKm).toLocaleString()}km超過`,
+    )
+  }
+  if (r.remainingDays !== undefined) {
+    parts.push(
+      r.remainingDays >= 0 ? `あと${r.remainingDays}日` : `${Math.abs(r.remainingDays)}日超過`,
+    )
+  }
+  return parts.join(' ・ ')
 }
