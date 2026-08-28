@@ -226,7 +226,7 @@ export default function VehicleFormPage() {
             placeholder="例: 次回の点検予定、気になっている箇所など自由にメモ"
           />
           <span className="text-xs text-slate-500">
-            マフラーやミラーなどのカスタム内容は「カスタム」タブで記録できます。
+            マフラーやミラーなどのカスタム内容は「バイクログ」タブで記録できます。
           </span>
         </Field>
 

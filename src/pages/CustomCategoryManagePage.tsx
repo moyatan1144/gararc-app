@@ -25,7 +25,7 @@ export default function CustomCategoryManagePage() {
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const backTo = `/vehicles/${vehicleId}?tab=custom`
+  const backTo = `/vehicles/${vehicleId}?tab=bikelog`
   const sorted = [...(categories ?? [])].sort((a, b) => {
     if (a.name === OTHER_CUSTOM_CATEGORY) return 1
     if (b.name === OTHER_CUSTOM_CATEGORY) return -1

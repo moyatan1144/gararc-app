@@ -117,8 +117,7 @@ export default function RemindersPage() {
 
 function reminderLink(r: Reminder): string {
   if (r.kind === 'deadline') return `/reminders/deadline/${r.deadline.id}/edit`
-  if (r.kind === 'custom') return `/vehicles/${r.vehicleId}?tab=custom`
-  return `/vehicles/${r.vehicleId}?tab=maintenance`
+  return `/vehicles/${r.vehicleId}?tab=bikelog`
 }
 
 function reminderLabel(r: Reminder): string {

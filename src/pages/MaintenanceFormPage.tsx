@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { MAINTENANCE_CATEGORIES } from '../types'
@@ -11,6 +11,8 @@ export default function MaintenanceFormPage() {
   const { id: vehicleId, recordId } = useParams<{ id: string; recordId?: string }>()
   const isEdit = Boolean(recordId)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const presetCategory = !isEdit ? searchParams.get('category') : null
   const vehicle = useLiveQuery(
     () => (vehicleId ? db.vehicles.get(vehicleId) : undefined),
     [vehicleId],
@@ -35,7 +37,7 @@ export default function MaintenanceFormPage() {
       .filter((name) => !(MAINTENANCE_CATEGORIES as readonly string[]).includes(name)),
   ]
 
-  const [category, setCategory] = useState<string>(MAINTENANCE_CATEGORIES[0])
+  const [category, setCategory] = useState<string>(presetCategory ?? MAINTENANCE_CATEGORIES[0])
   const [title, setTitle] = useState('')
   const [brand, setBrand] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -66,7 +68,7 @@ export default function MaintenanceFormPage() {
     setOdometer(String(vehicle.currentOdometer))
   }
 
-  const backTo = `/vehicles/${vehicleId}?tab=maintenance`
+  const backTo = `/vehicles/${vehicleId}?tab=bikelog`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -115,20 +117,31 @@ export default function MaintenanceFormPage() {
 
   return (
     <div className="p-4">
-      <BackHeader title={isEdit ? '整備記録を編集' : '整備記録を追加'} to={backTo} />
+      <BackHeader
+        title={
+          isEdit ? '整備記録を編集' : presetCategory ? `${presetCategory}を更新` : '整備記録を追加'
+        }
+        to={backTo}
+      />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="カテゴリ">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="input"
-          >
-            {categoryOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          {presetCategory ? (
+            <div className="input bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {presetCategory}
+            </div>
+          ) : (
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="input"
+            >
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
         <Field label="内容（任意、空欄はカテゴリ名になります）">
           <input

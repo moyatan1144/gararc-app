@@ -64,7 +64,7 @@ export default function CustomFormPage() {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
   }
 
-  const backTo = `/vehicles/${vehicleId}?tab=custom`
+  const backTo = `/vehicles/${vehicleId}?tab=bikelog`
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()

@@ -9,9 +9,13 @@ import {
   hasScheduleTag,
   computeCustomReminders,
   type CurrentCustomSpec,
-  type CustomReminder,
 } from '../customRecords'
-import { isUrgent } from '../reminders'
+import {
+  getCurrentMaintenanceStates,
+  buildMaintenanceHistory,
+  type CurrentMaintenanceState,
+} from '../maintenanceGrouping'
+import { isUrgent, computeMaintenanceReminders } from '../reminders'
 import {
   buildLineShareUrl,
   buildVehicleShareUrl,
@@ -20,14 +24,16 @@ import {
 } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
-type Tab = 'maintenance' | 'fuel' | 'custom'
-const TABS: Tab[] = ['maintenance', 'fuel', 'custom']
+type Tab = 'bikelog' | 'fuel'
+const TABS: Tab[] = ['bikelog', 'fuel']
+type LogView = 'scheduled' | 'unscheduled'
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'maintenance'
+  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'bikelog'
+  const [logView, setLogView] = useState<LogView>('scheduled')
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [showManualShare, setShowManualShare] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -57,12 +63,21 @@ export default function VehicleDetailPage() {
 
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
+
   const customSpecs = customRecords ? getCurrentCustomSpecs(customRecords) : []
   const scheduleSpecs = customSpecs.filter((s) => hasScheduleTag(s.latestRecord))
   const nonScheduleSpecs = customSpecs.filter((s) => !hasScheduleTag(s.latestRecord))
   const customReminderByCategory = new Map(
     computeCustomReminders(vehicle, customRecords ?? []).map((r) => [r.category, r]),
   )
+
+  const maintenanceStates = maintenanceRecords ? getCurrentMaintenanceStates(maintenanceRecords) : []
+  const scheduleMaintenance = maintenanceStates.filter((s) => s.isScheduled)
+  const nonScheduleMaintenance = maintenanceStates.filter((s) => !s.isScheduled)
+  const maintenanceReminderByCategory = new Map(
+    computeMaintenanceReminders(vehicle, maintenanceRecords ?? []).map((r) => [r.category, r]),
+  )
+
   const shareUrl = buildVehicleShareUrl(vehicle, customSpecs)
 
   async function handleShare() {
@@ -87,7 +102,8 @@ export default function VehicleDetailPage() {
   }
 
   function renderCustomSpecRow(spec: CurrentCustomSpec) {
-    const isOpen = expandedCategory === spec.category
+    const key = `custom:${spec.category}`
+    const isOpen = expandedCategory === key
     const categoryRecords = customRecords?.filter((r) => r.category === spec.category) ?? []
     const history = isOpen ? buildCustomHistory(categoryRecords) : []
     const reminder = customReminderByCategory.get(spec.category)
@@ -95,7 +111,7 @@ export default function VehicleDetailPage() {
 
     return (
       <li
-        key={spec.category}
+        key={key}
         className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
       >
         <div className="flex justify-between items-start">
@@ -107,7 +123,7 @@ export default function VehicleDetailPage() {
             </div>
             {reminder && (
               <div className={`text-sm mt-0.5 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
-                {describeCustomRemaining(reminder)}
+                {describeRemaining(reminder)}
                 {urgent && ' ・ 要注意'}
               </div>
             )}
@@ -121,7 +137,7 @@ export default function VehicleDetailPage() {
             </Link>
             <button
               type="button"
-              onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
+              onClick={() => setExpandedCategory(isOpen ? null : key)}
               className="text-sky-600 text-sm"
             >
               {isOpen ? '閉じる' : '履歴'}
@@ -143,6 +159,84 @@ export default function VehicleDetailPage() {
                 </span>
                 <Link
                   to={`/vehicles/${id}/custom/${record.id}/edit`}
+                  className="text-sky-600 flex-shrink-0"
+                >
+                  編集
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    )
+  }
+
+  function renderMaintenanceCard(state: CurrentMaintenanceState) {
+    const key = `maintenance:${state.category}`
+    const isOpen = expandedCategory === key
+    const categoryRecords = maintenanceRecords?.filter((r) => r.category === state.category) ?? []
+    const history = isOpen ? buildMaintenanceHistory(categoryRecords) : []
+    const reminder = maintenanceReminderByCategory.get(state.category)
+    const urgent = reminder ? isUrgent(reminder) : false
+    const r = state.latestRecord
+
+    return (
+      <li
+        key={key}
+        className={`card ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-medium">{state.category}</div>
+            <div className="text-sm text-slate-500">
+              {r.title}
+              {r.brand && ` ・ ${r.brand}`}
+            </div>
+            <div className="text-sm text-slate-500">
+              {r.date} ・ {r.odometer.toLocaleString()} km
+              {r.cost !== undefined && ` ・ ¥${r.cost.toLocaleString()}`}
+            </div>
+            {reminder && (
+              <div className={`text-sm mt-0.5 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
+                {describeRemaining(reminder)}
+                {urgent && ' ・ 要注意'}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              to={`/vehicles/${id}/maintenance/new?category=${encodeURIComponent(state.category)}`}
+              className="text-sky-600 text-sm font-medium"
+            >
+              ＋更新
+            </Link>
+            <button
+              type="button"
+              onClick={() => setExpandedCategory(isOpen ? null : key)}
+              className="text-sky-600 text-sm"
+            >
+              {isOpen ? '閉じる' : '履歴'}
+            </button>
+          </div>
+        </div>
+        {isOpen && (
+          <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
+            {history.map((record) => (
+              <li
+                key={record.id}
+                className="text-sm text-slate-500 flex justify-between items-center gap-2"
+              >
+                <span>
+                  {record.date}
+                  {'　'}
+                  {record.title}
+                  {record.brand && ` ・ ${record.brand}`}
+                  {' ・ '}
+                  {record.odometer.toLocaleString()} km
+                  {record.cost !== undefined && ` ・ ¥${record.cost.toLocaleString()}`}
+                </span>
+                <Link
+                  to={`/vehicles/${id}/maintenance/${record.id}/edit`}
                   className="text-sky-600 flex-shrink-0"
                 >
                   編集
@@ -187,10 +281,10 @@ export default function VehicleDetailPage() {
             <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
           )}
           <Link
-            to={`/vehicles/${id}?tab=custom`}
+            to={`/vehicles/${id}?tab=bikelog`}
             className="inline-block text-sky-600 text-sm mt-2"
           >
-            → 現在のカスタム仕様を見る
+            → バイクログを見る
           </Link>
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <button onClick={handleShare} className="text-sky-600 text-sm">
@@ -235,51 +329,88 @@ export default function VehicleDetailPage() {
       </div>
 
       <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 mb-4 text-sm">
-        <TabButton active={tab === 'maintenance'} onClick={() => setTab('maintenance')}>
-          整備記録
+        <TabButton active={tab === 'bikelog'} onClick={() => setTab('bikelog')}>
+          バイクログ
         </TabButton>
         <TabButton active={tab === 'fuel'} onClick={() => setTab('fuel')}>
           給油記録
         </TabButton>
-        <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
-          カスタム
-        </TabButton>
       </div>
 
-      {tab === 'maintenance' && (
-        <Section
-          addLabel="+ 整備記録を追加"
-          addTo={`/vehicles/${id}/maintenance/new`}
-        >
-          {maintenanceRecords?.length === 0 && <Empty>まだ整備記録がありません</Empty>}
-          <ul className="flex flex-col gap-2">
-            {maintenanceRecords?.map((r) => (
-              <li key={r.id} className="card">
-                <div className="flex justify-between items-start">
-                  <span className="font-medium">{r.title}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-500">{r.date}</span>
-                    <Link
-                      to={`/vehicles/${id}/maintenance/${r.id}/edit`}
-                      className="text-sky-600 text-sm"
-                    >
-                      編集
-                    </Link>
-                  </div>
-                </div>
-                <div className="text-sm text-slate-500">
-                  {r.category}
-                  {r.brand && ` ・ ${r.brand}`}
-                </div>
-                <div className="text-sm text-slate-500">
-                  {r.odometer.toLocaleString()} km
-                  {r.cost !== undefined && ` ・ ¥${r.cost.toLocaleString()}`}
-                </div>
-                {r.memo && <div className="text-sm mt-1">{r.memo}</div>}
-              </li>
-            ))}
-          </ul>
-        </Section>
+      {tab === 'bikelog' && (
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 text-xs">
+              <ViewToggleButton active={logView === 'scheduled'} onClick={() => setLogView('scheduled')}>
+                期限付き
+              </ViewToggleButton>
+              <ViewToggleButton active={logView === 'unscheduled'} onClick={() => setLogView('unscheduled')}>
+                期限なし
+              </ViewToggleButton>
+            </div>
+            <Link to={`/vehicles/${id}/custom/categories`} className="text-sky-600 text-xs">
+              カテゴリ管理
+            </Link>
+          </div>
+
+          <div className="flex justify-end gap-4 -mt-1 mb-2">
+            <Link
+              to={`/vehicles/${id}/maintenance/new`}
+              className="text-sky-600 text-sm font-medium"
+            >
+              + 整備記録を追加
+            </Link>
+            <Link to={`/vehicles/${id}/custom/new`} className="text-sky-600 text-sm font-medium">
+              + カスタムを追加
+            </Link>
+          </div>
+
+          {logView === 'scheduled' ? (
+            <>
+              {scheduleMaintenance.length === 0 && scheduleSpecs.length === 0 && (
+                <Empty>期限付きの記録がありません</Empty>
+              )}
+              {scheduleMaintenance.length > 0 && (
+                <>
+                  <div className="text-sm font-medium text-slate-500 mb-1">🔧 整備記録</div>
+                  <ul className="flex flex-col gap-2 mb-4">
+                    {scheduleMaintenance.map((state) => renderMaintenanceCard(state))}
+                  </ul>
+                </>
+              )}
+              {scheduleSpecs.length > 0 && (
+                <>
+                  <div className="text-sm font-medium text-slate-500 mb-1">🧴 消耗品・カスタム</div>
+                  <ul className="flex flex-col gap-2">
+                    {scheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
+                  </ul>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {nonScheduleMaintenance.length === 0 && nonScheduleSpecs.length === 0 && (
+                <Empty>期限なしの記録がありません</Empty>
+              )}
+              {nonScheduleMaintenance.length > 0 && (
+                <>
+                  <div className="text-sm font-medium text-slate-500 mb-1">🔧 整備記録</div>
+                  <ul className="flex flex-col gap-2 mb-4">
+                    {nonScheduleMaintenance.map((state) => renderMaintenanceCard(state))}
+                  </ul>
+                </>
+              )}
+              {nonScheduleSpecs.length > 0 && (
+                <>
+                  <div className="text-sm font-medium text-slate-500 mb-1">✨ カスタム・装備品</div>
+                  <ul className="flex flex-col gap-2">
+                    {nonScheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
+                  </ul>
+                </>
+              )}
+            </>
+          )}
+        </div>
       )}
 
       {tab === 'fuel' && (
@@ -327,37 +458,6 @@ export default function VehicleDetailPage() {
           </ul>
         </Section>
       )}
-
-      {tab === 'custom' && (
-        <Section addLabel="+ カスタムを追加" addTo={`/vehicles/${id}/custom/new`}>
-          <div className="flex justify-end -mt-1 mb-2">
-            <Link to={`/vehicles/${id}/custom/categories`} className="text-sky-600 text-xs">
-              カテゴリ管理
-            </Link>
-          </div>
-          {customSpecs.length === 0 && <Empty>まだカスタム記録がありません</Empty>}
-
-          {scheduleSpecs.length > 0 && (
-            <>
-              <div className="text-sm font-medium text-slate-500 mb-1">
-                🔧 メンテナンス予定のあるパーツ
-              </div>
-              <ul className="flex flex-col gap-2 mb-4">
-                {scheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
-              </ul>
-            </>
-          )}
-
-          {nonScheduleSpecs.length > 0 && (
-            <>
-              <div className="text-sm font-medium text-slate-500 mb-1">✨ カスタム・装備品</div>
-              <ul className="flex flex-col gap-2">
-                {nonScheduleSpecs.map((spec) => renderCustomSpecRow(spec))}
-              </ul>
-            </>
-          )}
-        </Section>
-      )}
     </div>
   )
 }
@@ -375,6 +475,30 @@ function TabButton({
     <button
       onClick={onClick}
       className={`flex-1 py-2 ${
+        active
+          ? 'bg-sky-600 text-white font-medium'
+          : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ViewToggleButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-1.5 ${
         active
           ? 'bg-sky-600 text-white font-medium'
           : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
@@ -410,7 +534,7 @@ function Empty({ children }: { children: ReactNode }) {
   return <div className="text-center text-slate-500 text-sm py-8">{children}</div>
 }
 
-function describeCustomRemaining(r: CustomReminder): string {
+function describeRemaining(r: { remainingKm?: number; remainingDays?: number }): string {
   const parts: string[] = []
   if (r.remainingKm !== undefined) {
     parts.push(
