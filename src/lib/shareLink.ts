@@ -39,7 +39,22 @@ export function decodeSharePayload(encoded: string): ShareablePayload | null {
   }
 }
 
+// Claude Artifactとして動かしている場合、公開URL(https://claude.ai/code/artifact/...)
+// ではなく、サンドボックス化されたiframeの配信用サブドメイン(*.claudeusercontent.com)を
+// location.originが指してしまう。そのURLは他人が開いても正しく機能しないため、
+// その場合は既知の公開URLに差し替える。Artifactを再公開してもURLは変わらない
+// (同じurlを指定して更新しているため)が、もし将来別のURLで公開し直した場合は
+// この値も更新すること。
+const KNOWN_ARTIFACT_URL = 'https://claude.ai/code/artifact/820a6bb3-84f0-4f94-b7ac-3500075b20dd'
+
+function resolveShareBaseUrl(): string {
+  if (location.hostname.endsWith('.claudeusercontent.com')) {
+    return KNOWN_ARTIFACT_URL
+  }
+  return `${location.origin}${location.pathname}`
+}
+
 export function buildSharePageUrl(payload: ShareablePayload): string {
   const encoded = encodeSharePayload(payload)
-  return `${location.origin}${location.pathname}#/share/${encoded}`
+  return `${resolveShareBaseUrl()}#/share/${encoded}`
 }
