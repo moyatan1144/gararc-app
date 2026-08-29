@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { getCurrentBikeLogSpecs } from '../bikeLog'
@@ -10,18 +11,45 @@ import BackHeader from '../components/BackHeader'
 // 「PDFに保存」を選んでもらう方式であれば、通常のブラウザ・ホーム画面に
 // 追加したアプリのどちらでも一貫して使える。
 export default function ExportPage() {
-  const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
+  const vehicles = useLiveQuery(() => db.vehicles.orderBy('createdAt').toArray(), [])
   const bikeLogRecords = useLiveQuery(() => db.bikeLogRecords.toArray(), [])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedVehicleId = searchParams.get('vehicleId') ?? ''
 
   if (!vehicles || !bikeLogRecords) {
     return <div className="p-4 text-slate-500">読み込み中...</div>
   }
 
+  const targetVehicles = selectedVehicleId
+    ? vehicles.filter((v) => v.id === selectedVehicleId)
+    : vehicles
+
   return (
     <div className="p-4 print:p-6">
       <div className="print:hidden">
         <BackHeader title="車両情報を出力" to="/settings" />
-        <button onClick={() => window.print()} className="btn-primary w-full mt-2">
+        {vehicles.length > 0 && (
+          <label className="flex flex-col gap-1 text-sm mb-3">
+            <span className="text-slate-600 dark:text-slate-400">出力する車両</span>
+            <select
+              value={selectedVehicleId}
+              onChange={(e) =>
+                setSearchParams(e.target.value ? { vehicleId: e.target.value } : {}, {
+                  replace: true,
+                })
+              }
+              className="input"
+            >
+              <option value="">すべての車両</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button onClick={() => window.print()} className="btn-primary w-full">
           🖨️ PDFとして出力
         </button>
         <p className="text-xs text-slate-500 mt-2 mb-4">
@@ -34,7 +62,7 @@ export default function ExportPage() {
       )}
 
       <div className="flex flex-col gap-8 print:gap-0">
-        {vehicles.map((vehicle) => {
+        {targetVehicles.map((vehicle) => {
           const records = bikeLogRecords.filter((r) => r.vehicleId === vehicle.id)
           const specs = getCurrentBikeLogSpecs(records)
 

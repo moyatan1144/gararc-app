@@ -1,16 +1,27 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useReminders } from '../hooks/useReminders'
 import { isUrgent, type Reminder } from '../reminders'
 
+type SortMode = 'urgency' | 'vehicle'
+
 export default function RemindersPage() {
   const { loading, reminders, deadlines, vehicles } = useReminders()
+  const [sortMode, setSortMode] = useState<SortMode>('urgency')
 
   if (loading) {
     return <div className="p-4 text-slate-500">読み込み中...</div>
   }
 
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
-  const sorted = [...reminders].sort((a, b) => remainingValue(a) - remainingValue(b))
+  const vehicleOrder = new Map(vehicles.map((v, i) => [v.id, i]))
+  const sorted = [...reminders].sort((a, b) => {
+    if (sortMode === 'vehicle') {
+      const orderDiff = (vehicleOrder.get(a.vehicleId) ?? 0) - (vehicleOrder.get(b.vehicleId) ?? 0)
+      if (orderDiff !== 0) return orderDiff
+    }
+    return remainingValue(a) - remainingValue(b)
+  })
   const deadlinesByVehicleId = new Map<string, typeof deadlines>()
   for (const vehicle of vehicles) deadlinesByVehicleId.set(vehicle.id, [])
   for (const d of deadlines) {
@@ -24,7 +35,17 @@ export default function RemindersPage() {
   return (
     <div className="p-4 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-bold mb-4">リマインダー</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold">リマインダー</h1>
+          <div className="flex rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 text-xs">
+            <SortButton active={sortMode === 'urgency'} onClick={() => setSortMode('urgency')}>
+              期限順
+            </SortButton>
+            <SortButton active={sortMode === 'vehicle'} onClick={() => setSortMode('vehicle')}>
+              車両順
+            </SortButton>
+          </div>
+        </div>
 
         {sorted.length === 0 && (
           <div className="text-center text-slate-500 mt-8 text-sm">
@@ -112,6 +133,30 @@ export default function RemindersPage() {
         </ul>
       </div>
     </div>
+  )
+}
+
+function SortButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-1.5 ${
+        active
+          ? 'bg-sky-600 text-white font-medium'
+          : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

@@ -9,15 +9,15 @@ import {
   computeBikeLogReminders,
   type CurrentBikeLogSpec,
 } from '../bikeLog'
-import { isUrgent } from '../reminders'
+import { computeDeadlineReminders, isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
 import BackHeader from '../components/BackHeader'
 import ProfileCard from '../components/ProfileCard'
 
-type Tab = 'bikelog' | 'fuel'
-const TABS: Tab[] = ['bikelog', 'fuel']
+type Tab = 'bikelog' | 'fuel' | 'deadline'
+const TABS: Tab[] = ['bikelog', 'fuel', 'deadline']
 
 type FilterChip = 'scheduled' | 'unscheduled' | `tag:${string}`
 
@@ -66,11 +66,20 @@ export default function VehicleDetailPage() {
     () => (id ? db.fuelRecords.where('vehicleId').equals(id).toArray() : []),
     [id],
   )
+  const deadlines = useLiveQuery(
+    () => (id ? db.deadlines.where('vehicleId').equals(id).toArray() : []),
+    [id],
+  )
 
   if (!vehicle || !id) return <div className="p-4 text-slate-500">読み込み中...</div>
 
   const fuelStats = fuelRecords ? computeFuelStats(fuelRecords) : []
   const avgKmPerL = averageKmPerLiter(fuelStats)
+
+  const sortedDeadlines = [...(deadlines ?? [])].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
+  const deadlineReminderById = new Map(
+    computeDeadlineReminders(deadlines ?? []).map((r) => [r.deadline.id, r]),
+  )
 
   const bikeLogSpecs = bikeLogRecords ? getCurrentBikeLogSpecs(bikeLogRecords) : []
   const reminderByCategory = new Map(
@@ -341,6 +350,9 @@ export default function VehicleDetailPage() {
         <TabButton active={tab === 'fuel'} onClick={() => setTab('fuel')}>
           給油記録
         </TabButton>
+        <TabButton active={tab === 'deadline'} onClick={() => setTab('deadline')}>
+          期限
+        </TabButton>
       </div>
 
       {tab === 'bikelog' && (
@@ -424,6 +436,46 @@ export default function VehicleDetailPage() {
                 )}
               </li>
             ))}
+          </ul>
+        </Section>
+      )}
+
+      {tab === 'deadline' && (
+        <Section addLabel="+ 期限を追加" addTo={`/reminders/deadline/new?vehicleId=${id}`}>
+          {sortedDeadlines.length === 0 && <Empty>まだ期限が登録されていません</Empty>}
+          <ul className="flex flex-col gap-2">
+            {sortedDeadlines.map((d) => {
+              const reminder = deadlineReminderById.get(d.id)
+              const urgent = reminder ? isUrgent(reminder) : false
+              return (
+                <li key={d.id}>
+                  <Link
+                    to={`/reminders/deadline/${d.id}/edit`}
+                    className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="font-medium">
+                        {d.type} ・ {d.label}
+                      </span>
+                      <span className="text-sm text-slate-500 flex-shrink-0">{d.dueDate}</span>
+                    </div>
+                    {reminder && (
+                      <div className={`text-sm mt-1 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
+                        {reminder.remainingDays >= 0
+                          ? `あと${reminder.remainingDays}日`
+                          : `${Math.abs(reminder.remainingDays)}日超過`}
+                        {urgent && ' ・ 要注意'}
+                      </div>
+                    )}
+                    {d.memo && (
+                      <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">
+                        {d.memo}
+                      </div>
+                    )}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </Section>
       )}

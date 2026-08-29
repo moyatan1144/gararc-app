@@ -7,7 +7,6 @@ import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
 
 const TYPES: DeadlineType[] = ['車検', '任意保険', '自賠責保険', 'その他']
-const backTo = '/reminders'
 
 export default function DeadlineFormPage() {
   const { deadlineId } = useParams<{ deadlineId?: string }>()
@@ -17,7 +16,7 @@ export default function DeadlineFormPage() {
     () => (deadlineId ? db.deadlines.get(deadlineId) : undefined),
     [deadlineId],
   )
-  const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
+  const vehicles = useLiveQuery(() => db.vehicles.orderBy('createdAt').toArray(), [])
   const existingVehicle = useLiveQuery(
     () => (existing ? db.vehicles.get(existing.vehicleId) : undefined),
     [existing],
@@ -28,6 +27,11 @@ export default function DeadlineFormPage() {
     () => (presetVehicleId ? db.vehicles.get(presetVehicleId) : undefined),
     [presetVehicleId],
   )
+
+  // 車両ページの「期限」タブから来た場合はそのタブへ、そうでなければ
+  // リマインダーへ戻る(どちらの入口からも登録できるようにしているため)。
+  const backToVehicleId = isEdit ? existing?.vehicleId : presetVehicleId
+  const backTo = backToVehicleId ? `/vehicles/${backToVehicleId}?tab=deadline` : '/reminders'
 
   const [vehicleId, setVehicleId] = useState(presetVehicleId ?? '')
   const [type, setType] = useState<DeadlineType>('車検')
@@ -115,7 +119,7 @@ export default function DeadlineFormPage() {
             ))}
           </select>
         </Field>
-        <Field label="ラベル（任意、空欄は種類名になります）">
+        <Field label="ラベル（任意）">
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -149,6 +153,10 @@ export default function DeadlineFormPage() {
             rows={3}
             placeholder="例: 証券番号、連絡先、更新条件など"
           />
+          <span className="text-xs text-slate-500">
+            ⚠️
+            このデータは端末内にのみ保存され、外部には送信されません。証券番号など重要な情報を入力する場合は、ご自身の判断・責任でご利用ください。
+          </span>
         </Field>
 
         <button type="submit" className="btn-primary mt-2">

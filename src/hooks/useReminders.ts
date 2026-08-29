@@ -4,7 +4,7 @@ import { computeDeadlineReminders, isUrgent, type Reminder } from '../reminders'
 import { computeBikeLogReminders } from '../bikeLog'
 
 export function useReminders() {
-  const vehicles = useLiveQuery(() => db.vehicles.toArray(), [])
+  const vehicles = useLiveQuery(() => db.vehicles.orderBy('createdAt').toArray(), [])
   const bikeLogRecords = useLiveQuery(() => db.bikeLogRecords.toArray(), [])
   const deadlines = useLiveQuery(() => db.deadlines.toArray(), [])
 
