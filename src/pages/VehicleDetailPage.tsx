@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
@@ -12,7 +12,9 @@ import {
 import { isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
+import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
 import BackHeader from '../components/BackHeader'
+import ProfileCard from '../components/ProfileCard'
 
 type Tab = 'bikelog' | 'fuel'
 const TABS: Tab[] = ['bikelog', 'fuel']
@@ -34,6 +36,9 @@ export default function VehicleDetailPage() {
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [showManualShare, setShowManualShare] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [imageBusy, setImageBusy] = useState(false)
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   function setTab(next: Tab) {
     setSearchParams({ tab: next }, { replace: true })
@@ -85,7 +90,7 @@ export default function VehicleDetailPage() {
 
   const shareText = buildShareText(vehicle, bikeLogSpecs)
 
-  async function handleShare() {
+  async function handleShareText() {
     if (!vehicle) return
     try {
       const result = await shareVehicleText(vehicle, shareText)
@@ -103,6 +108,29 @@ export default function VehicleDetailPage() {
       if (err instanceof Error && err.name === 'AbortError') return
       // 自動共有・自動コピーができない環境向けに、手動コピーの手段を出す
       setShowManualShare(true)
+    }
+  }
+
+  // 画像として書き出して共有する。文字数制限を気にせず仕様一覧をまとめて送れる。
+  // ファイル添付の共有(Web Share API)が使えない場合は、画像をその場に表示して
+  // 手動で保存・共有してもらう。画像の生成自体に失敗した場合はテキスト共有に
+  // フォールバックする。
+  async function handleShareImage() {
+    if (!vehicle || !cardRef.current) return
+    setImageBusy(true)
+    try {
+      const file = await renderNodeToImageFile(cardRef.current, `${vehicle.name}.png`)
+      const result = await shareImageFile(file, {
+        title: `${vehicle.name}の仕様`,
+        text: `🏍️ ${vehicle.name}の現在の仕様`,
+      })
+      if (result === 'preview') {
+        setPreviewImageUrl(URL.createObjectURL(file))
+      }
+    } catch {
+      await handleShareText()
+    } finally {
+      setImageBusy(false)
     }
   }
 
@@ -187,8 +215,49 @@ export default function VehicleDetailPage() {
     )
   }
 
+  const profileCardData = {
+    name: vehicle.name,
+    manufacturer: vehicle.manufacturer,
+    model: vehicle.model,
+    displacementCc: vehicle.displacementCc,
+    modelYear: vehicle.modelYear,
+    currentOdometer: vehicle.currentOdometer,
+    specs: bikeLogSpecs.map((s) => ({ category: s.category, content: s.content, cost: s.cost })),
+  }
+
   return (
     <div className="p-4">
+      {/* 画像共有用に画面外でレンダリングしておき、html2canvasで書き出す */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '480px' }} aria-hidden="true">
+        <div ref={cardRef}>
+          <ProfileCard data={profileCardData} />
+        </div>
+      </div>
+
+      {previewImageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4"
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <img
+            src={previewImageUrl}
+            alt="共有用画像"
+            className="max-w-full max-h-[70vh] rounded-lg shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="text-white text-sm text-center mt-4">
+            画像を長押し（またはドラッグ）して保存し、共有してください
+          </p>
+          <button
+            type="button"
+            onClick={() => setPreviewImageUrl(null)}
+            className="btn-secondary bg-white px-6 mt-4"
+          >
+            閉じる
+          </button>
+        </div>
+      )}
+
       <BackHeader title={vehicle.name} to="/" />
 
       <div className="card mb-4 flex gap-3">
@@ -216,8 +285,12 @@ export default function VehicleDetailPage() {
               `（購入時 ${vehicle.purchaseOdometer.toLocaleString()} km）`}
           </div>
           <div className="flex flex-wrap items-center gap-3 mt-2">
-            <button onClick={handleShare} className="text-sky-600 text-sm">
-              🔗 共有
+            <button
+              onClick={handleShareImage}
+              disabled={imageBusy}
+              className="text-sky-600 text-sm disabled:opacity-50"
+            >
+              {imageBusy ? '画像を生成中...' : '📷 画像で共有'}
             </button>
             <a
               href={buildXShareUrl(shareText)}
@@ -237,7 +310,9 @@ export default function VehicleDetailPage() {
             </a>
             {shareStatus && <span className="text-xs text-slate-500">{shareStatus}</span>}
           </div>
-          <p className="text-xs text-slate-500 mt-1">現在の仕様をテキストとして共有します</p>
+          <p className="text-xs text-slate-500 mt-1">
+            現在の仕様をまとめた画像を共有します（Xでシェア・LINEでシェアはテキストで共有します）
+          </p>
           {showManualShare && (
             <div className="mt-2">
               <p className="text-xs text-slate-500 mb-1">
