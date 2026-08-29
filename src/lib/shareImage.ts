@@ -19,10 +19,12 @@ export async function renderNodeToImageFile(node: HTMLElement, filename: string)
   return new File([blob], filename, { type: 'image/png' })
 }
 
-export type ImageShareResult = 'shared' | 'preview'
+export type ImageShareResult = 'shared' | 'copied' | 'preview'
 
 // Web Share API(ファイル添付)が使えればネイティブの共有シートを開く。
-// 使えない・失敗した場合は呼び出し側でプレビュー表示し、手動保存してもらう。
+// 使えない場合はクリップボードへの画像コピーを試み(LINEやXの投稿欄に
+// 直接ペーストできる)、それも使えない場合は呼び出し側でプレビュー表示し
+// 手動保存してもらう。
 export async function shareImageFile(
   file: File,
   opts: { title: string; text: string },
@@ -33,8 +35,18 @@ export async function shareImageFile(
       return 'shared'
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return 'shared'
-      return 'preview'
+      // ファイル共有に失敗した場合はクリップボードコピーにフォールバックする
     }
   }
+
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [file.type]: file })])
+      return 'copied'
+    } catch {
+      // クリップボードコピーにも失敗した場合はプレビュー表示にフォールバックする
+    }
+  }
+
   return 'preview'
 }

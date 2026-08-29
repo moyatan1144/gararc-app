@@ -38,6 +38,7 @@ export default function VehicleDetailPage() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [imageBusy, setImageBusy] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [imageCopied, setImageCopied] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   function setTab(next: Tab) {
@@ -112,9 +113,9 @@ export default function VehicleDetailPage() {
   }
 
   // 画像として書き出して共有する。文字数制限を気にせず仕様一覧をまとめて送れる。
-  // ファイル添付の共有(Web Share API)が使えない場合は、画像をその場に表示して
-  // 手動で保存・共有してもらう。画像の生成自体に失敗した場合はテキスト共有に
-  // フォールバックする。
+  // ファイル添付の共有(Web Share API)が使えない場合はクリップボードへのコピーを試み、
+  // それも使えない場合は画像をその場に表示して手動で保存・共有してもらう。
+  // 画像の生成自体に失敗した場合はテキスト共有にフォールバックする。
   async function handleShareImage() {
     if (!vehicle || !cardRef.current) return
     setImageBusy(true)
@@ -124,7 +125,8 @@ export default function VehicleDetailPage() {
         title: `${vehicle.name}の仕様`,
         text: `🏍️ ${vehicle.name}の現在の仕様`,
       })
-      if (result === 'preview') {
+      if (result === 'copied' || result === 'preview') {
+        setImageCopied(result === 'copied')
         setPreviewImageUrl(URL.createObjectURL(file))
       }
     } catch {
@@ -246,7 +248,9 @@ export default function VehicleDetailPage() {
             onClick={(e) => e.stopPropagation()}
           />
           <p className="text-white text-sm text-center mt-4">
-            画像を長押し（またはドラッグ）して保存し、共有してください
+            {imageCopied
+              ? '画像をコピーしました。LINEやXの投稿欄に貼り付けて共有できます（保存する場合は長押ししてください）'
+              : '画像を長押し（またはドラッグ）して保存し、共有してください'}
           </p>
           <button
             type="button"
