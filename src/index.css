@@ -22,6 +22,14 @@ body {
   }
 }
 
+/* 印刷時はダークモード設定に関わらず白背景・黒文字に固定する */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+}
+
 /* 数値入力のスピンボタンを全体で非表示にする */
 input[type='number'] {
   -moz-appearance: textfield;

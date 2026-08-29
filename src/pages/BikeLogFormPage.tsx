@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
@@ -49,9 +49,16 @@ function BikeLogFormInner() {
   )
   const history = categoryRecords ? buildBikeLogHistory(categoryRecords) : []
 
+  // 履歴の別記録をタップした時など、このコンポーネントが再マウントされる
+  // (recordIdが変わる)たびにページの一番上を表示する。
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [])
+
   const [searchParams] = useSearchParams()
   const presetCategory = !isEdit ? searchParams.get('category') : null
 
+  const [confirmingUpdate, setConfirmingUpdate] = useState(false)
   const [category, setCategory] = useState(presetCategory ?? '')
   const [content, setContent] = useState('')
   const [brand, setBrand] = useState('')
@@ -114,11 +121,12 @@ function BikeLogFormInner() {
 
     if (isEdit && recordId) {
       await db.bikeLogRecords.update(recordId, fields)
+      setConfirmingUpdate(false)
+      window.scrollTo({ top: 0 })
     } else {
       await db.bikeLogRecords.add({ id: newId(), vehicleId, ...fields, createdAt: nowIso() })
+      navigate(backTo)
     }
-
-    navigate(backTo)
   }
 
   async function handleDeleteRecord(targetId: string) {
@@ -275,9 +283,42 @@ function BikeLogFormInner() {
           </div>
         )}
 
-        <button type="submit" className="btn-primary mt-2">
-          {isEdit ? '更新する' : '登録する'}
-        </button>
+        {!isEdit && (
+          <button type="submit" className="btn-primary mt-2">
+            登録する
+          </button>
+        )}
+        {isEdit && !confirmingUpdate && (
+          <button
+            type="button"
+            onClick={() => setConfirmingUpdate(true)}
+            className="btn-primary mt-2"
+          >
+            更新する
+          </button>
+        )}
+        {isEdit && confirmingUpdate && (
+          <div className="rounded-lg border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/40 p-3 flex flex-col gap-2 mt-2">
+            <p className="text-sm text-sky-700 dark:text-sky-300">
+              この内容で更新します。よろしいですか？
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="flex-1 rounded-lg bg-sky-600 text-white text-sm font-medium py-2"
+              >
+                更新する
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingUpdate(false)}
+                className="btn-secondary flex-1 py-2 text-sm"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
       </form>
 
       {isEdit && (

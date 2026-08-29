@@ -9,6 +9,7 @@ import DeadlineFormPage from './pages/DeadlineFormPage'
 import CustomCategoryManagePage from './pages/CustomCategoryManagePage'
 import RemindersPage from './pages/RemindersPage'
 import SettingsPage from './pages/SettingsPage'
+import ExportPage from './pages/ExportPage'
 import SharePage from './pages/SharePage'
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/reminders/deadline/new" element={<DeadlineFormPage />} />
         <Route path="/reminders/deadline/:deadlineId/edit" element={<DeadlineFormPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/export" element={<ExportPage />} />
       </Route>
     </Routes>
   )

@@ -16,13 +16,13 @@ export default function Layout() {
   }, [])
 
   return (
-    <div className="min-h-dvh flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-dvh flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 print:bg-white print:text-black">
       <NotificationPrompt />
       <ReminderNotifier />
-      <main className="flex-1 pb-20 max-w-md mx-auto w-full">
+      <main className="flex-1 pb-20 max-w-md mx-auto w-full print:max-w-none print:pb-0">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur print:hidden">
         <div className="max-w-md mx-auto flex">
           {navItems.map((item) => (
             <NavLink

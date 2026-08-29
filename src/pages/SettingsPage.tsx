@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { db } from '../db'
 import { useReminders } from '../hooks/useReminders'
 import { useNotificationPermission } from '../hooks/useNotificationPermission'
@@ -105,6 +106,16 @@ export default function SettingsPage() {
         <p className="text-sm text-slate-500 mt-2">
           現在の要注意リマインダー: <span className="font-semibold">{urgentCount}件</span>
         </p>
+      </div>
+
+      <div className="card">
+        <div className="font-medium mb-1">車両情報の出力</div>
+        <p className="text-sm text-slate-500 mb-3">
+          各車両の車両情報とバイクログを一覧にして出力します。印刷ダイアログから「PDFに保存」を選ぶと、PDFとして保存できます。
+        </p>
+        <Link to="/settings/export" className="btn-secondary w-full block text-center">
+          車両情報を出力する
+        </Link>
       </div>
 
       <div className="card">

@@ -224,7 +224,7 @@ export default function VehicleFormPage() {
             />
           </Field>
         </div>
-        <Field label="メモ（任意）">
+        <Field label="メモ（任意・非公開）">
           <textarea
             value={specNotes}
             onChange={(e) => setSpecNotes(e.target.value)}
@@ -233,7 +233,7 @@ export default function VehicleFormPage() {
             placeholder="例: 保管場所、任意保険の連絡先、気になる症状など自由にメモ"
           />
           <span className="text-xs text-slate-500">
-            マフラーやミラーなどのカスタム内容は「バイクログ」タブで記録できます。
+            このメモは共有ページには含まれません。マフラーやミラーなどのカスタム内容は「バイクログ」タブで記録できます。
           </span>
         </Field>
 

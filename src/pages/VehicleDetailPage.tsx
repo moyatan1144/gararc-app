@@ -125,7 +125,23 @@ export default function VehicleDetailPage() {
       >
         <div className="flex justify-between items-start">
           <div>
-            <div className="font-medium">{spec.category}</div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium">{spec.category}</span>
+              {spec.isScheduled && (
+                <span className="text-xs" title="期限あり">
+                  🔔
+                </span>
+              )}
+              {(spec.latestRecord.tags ?? []).map((tag) => (
+                <span
+                  key={tag}
+                  title={`#${tag}`}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-[10px] leading-none text-slate-600 dark:text-slate-300 font-medium"
+                >
+                  {tag[0]}
+                </span>
+              ))}
+            </div>
             <div className="text-sm text-slate-500">
               {spec.content}
               {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
