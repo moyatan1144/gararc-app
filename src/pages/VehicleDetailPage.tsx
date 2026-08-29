@@ -123,10 +123,10 @@ export default function VehicleDetailPage() {
         key={spec.category}
         className={`card-compact ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
       >
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-medium">{spec.category}</span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">{spec.category}</span>
+            <div className="flex items-center gap-1 flex-shrink-0">
               {spec.isScheduled && (
                 <span className="text-xs" title="期限あり">
                   🔔
@@ -142,18 +142,18 @@ export default function VehicleDetailPage() {
                 </span>
               ))}
             </div>
-            <div className="text-sm text-slate-500">
-              {spec.content}
-              {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
-              {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
-            </div>
-            {reminder && (
-              <div className={`text-sm mt-0.5 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
-                {describeRemaining(reminder)}
-                {urgent && ' ・ 要注意'}
-              </div>
-            )}
           </div>
+          <div className="text-sm text-slate-500">
+            {spec.content}
+            {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
+            {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
+          </div>
+          {reminder && (
+            <div className={`text-sm ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
+              {describeRemaining(reminder)}
+              {urgent && ' ・ 要注意'}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           <Link
@@ -220,9 +220,6 @@ export default function VehicleDetailPage() {
             {vehicle.purchaseOdometer !== undefined &&
               `（購入時 ${vehicle.purchaseOdometer.toLocaleString()} km）`}
           </div>
-          {vehicle.specNotes && (
-            <div className="text-sm mt-2 whitespace-pre-wrap">{vehicle.specNotes}</div>
-          )}
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <button onClick={handleShare} className="text-sky-600 text-sm">
               🔗 共有
