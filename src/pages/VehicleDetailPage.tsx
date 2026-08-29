@@ -11,12 +11,7 @@ import {
 } from '../bikeLog'
 import { isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
-import {
-  buildLineShareUrl,
-  buildVehicleShareUrl,
-  buildXShareUrl,
-  shareVehicleLink,
-} from '../lib/share'
+import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import BackHeader from '../components/BackHeader'
 
 type Tab = 'bikelog' | 'fuel'
@@ -88,12 +83,12 @@ export default function VehicleDetailPage() {
 
   const filteredSpecs = bikeLogSpecs.filter(matchesFilters)
 
-  const shareUrl = buildVehicleShareUrl(vehicle, bikeLogSpecs)
+  const shareText = buildShareText(vehicle, bikeLogSpecs)
 
   async function handleShare() {
     if (!vehicle) return
     try {
-      const result = await shareVehicleLink(vehicle, shareUrl)
+      const result = await shareVehicleText(vehicle, shareText)
       if (result === 'copied') {
         setShareStatus('コピーしました')
         setShowManualShare(false)
@@ -225,7 +220,7 @@ export default function VehicleDetailPage() {
               🔗 共有
             </button>
             <a
-              href={buildXShareUrl(vehicle, shareUrl)}
+              href={buildXShareUrl(shareText)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-600 text-sm"
@@ -233,7 +228,7 @@ export default function VehicleDetailPage() {
               Xでシェア
             </a>
             <a
-              href={buildLineShareUrl(shareUrl)}
+              href={buildLineShareUrl(shareText)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-600 text-sm"
@@ -242,19 +237,17 @@ export default function VehicleDetailPage() {
             </a>
             {shareStatus && <span className="text-xs text-slate-500">{shareStatus}</span>}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            現在のカスタム仕様も含めたページのリンクを共有します
-          </p>
+          <p className="text-xs text-slate-500 mt-1">現在の仕様をテキストとして共有します</p>
           {showManualShare && (
             <div className="mt-2">
               <p className="text-xs text-slate-500 mb-1">
-                自動共有・自動コピーがこの環境では使えないため、下のリンクを選択してコピーしてください。
+                自動共有・自動コピーがこの環境では使えないため、下のテキストを選択してコピーしてください。
               </p>
               <textarea
                 readOnly
-                value={shareUrl}
+                value={shareText}
                 onFocus={(e) => e.target.select()}
-                rows={2}
+                rows={6}
                 className="input w-full text-sm"
               />
             </div>
