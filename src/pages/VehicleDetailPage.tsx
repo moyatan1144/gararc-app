@@ -448,7 +448,7 @@ export default function VehicleDetailPage() {
       {tab === 'deadline' && (
         <Section addLabel="+ 期限を追加" addTo={`/reminders/deadline/new?vehicleId=${id}&from=vehicle`}>
           {sortedDeadlines.length === 0 && <Empty>まだ期限が登録されていません</Empty>}
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-1.5">
             {sortedDeadlines.map((d) => {
               const reminder = deadlineReminderById.get(d.id)
               const urgent = reminder ? isUrgent(reminder) : false
@@ -456,10 +456,14 @@ export default function VehicleDetailPage() {
                 <li key={d.id}>
                   <Link
                     to={`/reminders/deadline/${d.id}/edit?from=vehicle`}
-                    className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+                    className={`block rounded-lg border px-2.5 py-1.5 ${
+                      urgent
+                        ? 'border-red-300 dark:border-red-800'
+                        : 'border-slate-200 dark:border-slate-800'
+                    }`}
                   >
                     <div className="flex justify-between items-center gap-2">
-                      <span className="font-medium min-w-0 truncate">
+                      <span className="text-sm font-medium truncate">
                         {d.type} ・ {d.label}
                       </span>
                       <ReminderStat
@@ -469,7 +473,7 @@ export default function VehicleDetailPage() {
                       />
                     </div>
                     {d.memo && (
-                      <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">
+                      <div className="text-sm text-slate-500 mt-0.5 whitespace-pre-wrap">
                         {d.memo}
                       </div>
                     )}
