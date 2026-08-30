@@ -11,11 +11,11 @@ import {
 } from '../bikeLog'
 import { computeDeadlineReminders, isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
-import { formatShortDate } from '../lib/dateUtils'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
 import BackHeader from '../components/BackHeader'
 import ProfileCard from '../components/ProfileCard'
+import ReminderStat from '../components/ReminderStat'
 
 type Tab = 'bikelog' | 'fuel' | 'deadline'
 const TABS: Tab[] = ['bikelog', 'fuel', 'deadline']
@@ -178,17 +178,21 @@ export default function VehicleDetailPage() {
               ))}
             </div>
           </div>
-          <div className="text-sm text-slate-500">
-            {spec.content}
-            {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
-            {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
-          </div>
-          {reminder && (
-            <div className={`text-sm ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
-              {describeRemaining(reminder)}
-              {urgent && ' ・ 要注意'}
+          <div className="flex items-end justify-between gap-2">
+            <div className="text-sm text-slate-500 min-w-0">
+              {spec.content}
+              {spec.latestRecord.brand && ` ・ ${spec.latestRecord.brand}`}
+              {spec.cost !== undefined && ` ・ ¥${spec.cost.toLocaleString()}`}
             </div>
-          )}
+            {reminder && (
+              <ReminderStat
+                remainingKm={reminder.remainingKm}
+                remainingDays={reminder.remainingDays}
+                dueDate={reminder.nextDueDate}
+                urgent={urgent}
+              />
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           <Link
@@ -454,22 +458,16 @@ export default function VehicleDetailPage() {
                     to={`/reminders/deadline/${d.id}/edit?from=vehicle`}
                     className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
                   >
-                    <div className="flex justify-between items-start">
-                      <span className="font-medium">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-medium min-w-0 truncate">
                         {d.type} ・ {d.label}
                       </span>
-                      <span className="text-sm text-slate-500 flex-shrink-0">
-                        {formatShortDate(d.dueDate)}
-                      </span>
+                      <ReminderStat
+                        remainingDays={reminder?.remainingDays}
+                        dueDate={d.dueDate}
+                        urgent={urgent}
+                      />
                     </div>
-                    {reminder && (
-                      <div className={`text-sm mt-1 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>
-                        {reminder.remainingDays >= 0
-                          ? `あと${reminder.remainingDays}日`
-                          : `${Math.abs(reminder.remainingDays)}日超過`}
-                        {urgent && ' ・ 要注意'}
-                      </div>
-                    )}
                     {d.memo && (
                       <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">
                         {d.memo}
@@ -532,21 +530,4 @@ function Section({
 
 function Empty({ children }: { children: ReactNode }) {
   return <div className="text-center text-slate-500 text-sm py-8">{children}</div>
-}
-
-function describeRemaining(r: { remainingKm?: number; remainingDays?: number }): string {
-  const parts: string[] = []
-  if (r.remainingKm !== undefined) {
-    parts.push(
-      r.remainingKm >= 0
-        ? `あと${r.remainingKm.toLocaleString()}km`
-        : `${Math.abs(r.remainingKm).toLocaleString()}km超過`,
-    )
-  }
-  if (r.remainingDays !== undefined) {
-    parts.push(
-      r.remainingDays >= 0 ? `あと${r.remainingDays}日` : `${Math.abs(r.remainingDays)}日超過`,
-    )
-  }
-  return parts.join(' ・ ')
 }

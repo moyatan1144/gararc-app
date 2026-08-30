@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useReminders } from '../hooks/useReminders'
 import { isUrgent, type DeadlineReminder, type Reminder } from '../reminders'
-import { formatShortDate } from '../lib/dateUtils'
+import ReminderStat from '../components/ReminderStat'
 
 type SortMode = 'urgency' | 'vehicle'
 
@@ -82,18 +82,25 @@ export default function RemindersPage() {
               <li key={i}>
                 <Link
                   to={reminderLink(reminder)}
-                  className={`card-compact block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+                  className={`card-compact flex items-center justify-between gap-2 ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
                 >
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="font-medium truncate min-w-0">
-                      {vehicle?.name} ・ {reminderLabel(reminder)}
-                    </span>
-                    <span
-                      className={`text-sm font-semibold flex-shrink-0 ${urgent ? 'text-red-600' : 'text-sky-600'}`}
-                    >
-                      {describe(reminder)}
-                    </span>
-                  </div>
+                  <span className="font-medium truncate min-w-0">
+                    {vehicle?.name} ・ {reminderLabel(reminder)}
+                  </span>
+                  {reminder.kind === 'deadline' ? (
+                    <ReminderStat
+                      remainingDays={reminder.remainingDays}
+                      dueDate={reminder.deadline.dueDate}
+                      urgent={urgent}
+                    />
+                  ) : (
+                    <ReminderStat
+                      remainingKm={reminder.remainingKm}
+                      remainingDays={reminder.remainingDays}
+                      dueDate={reminder.nextDueDate}
+                      urgent={urgent}
+                    />
+                  )}
                 </Link>
               </li>
             )
@@ -159,17 +166,11 @@ export default function RemindersPage() {
                                 <span className="text-sm font-medium truncate">
                                   {d.type} ・ {d.label}
                                 </span>
-                                <span
-                                  className={`text-sm font-medium flex-shrink-0 ${urgent ? 'text-red-600' : 'text-sky-600'}`}
-                                >
-                                  {formatShortDate(d.dueDate)}
-                                  {reminder &&
-                                    ` ・ ${
-                                      reminder.remainingDays >= 0
-                                        ? `あと${reminder.remainingDays}日`
-                                        : `${Math.abs(reminder.remainingDays)}日超過`
-                                    }`}
-                                </span>
+                                <ReminderStat
+                                  remainingDays={reminder?.remainingDays}
+                                  dueDate={d.dueDate}
+                                  urgent={urgent}
+                                />
                               </div>
                               {d.memo && (
                                 <div className="text-sm text-slate-500 mt-0.5 whitespace-pre-wrap">
@@ -229,21 +230,4 @@ function remainingValue(r: Reminder): number {
   if (r.kind === 'deadline') return r.remainingDays
   const candidates = [r.remainingKm, r.remainingDays !== undefined ? r.remainingDays * 30 : undefined]
   return Math.min(...candidates.filter((v): v is number => v !== undefined), Infinity)
-}
-
-function describe(r: Reminder): string {
-  if (r.kind === 'deadline') {
-    const dateText = formatShortDate(r.deadline.dueDate)
-    return r.remainingDays >= 0
-      ? `あと${r.remainingDays}日（${dateText}）`
-      : `${Math.abs(r.remainingDays)}日超過（${dateText}）`
-  }
-  const parts: string[] = []
-  if (r.remainingKm !== undefined) {
-    parts.push(r.remainingKm >= 0 ? `あと${r.remainingKm.toLocaleString()}km` : `${Math.abs(r.remainingKm).toLocaleString()}km超過`)
-  }
-  if (r.remainingDays !== undefined) {
-    parts.push(r.remainingDays >= 0 ? `あと${r.remainingDays}日` : `${Math.abs(r.remainingDays)}日超過`)
-  }
-  return parts.join(' ・ ') || '交換間隔未設定'
 }
