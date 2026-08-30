@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../db'
 import { useReminders } from '../hooks/useReminders'
@@ -33,12 +33,16 @@ export default function SettingsPage() {
     setNotifyEnabled(next)
   }
 
+  const importInputRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
+
   async function handleExport() {
     const data = {
       vehicles: await db.vehicles.toArray(),
       bikeLogRecords: await db.bikeLogRecords.toArray(),
       fuelRecords: await db.fuelRecords.toArray(),
       deadlines: await db.deadlines.toArray(),
+      customCategories: await db.customCategories.toArray(),
       exportedAt: new Date().toISOString(),
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -48,6 +52,66 @@ export default function SettingsPage() {
     a.download = `bike-app-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    let data: {
+      vehicles?: unknown[]
+      bikeLogRecords?: unknown[]
+      fuelRecords?: unknown[]
+      deadlines?: unknown[]
+      customCategories?: unknown[]
+    }
+    try {
+      data = JSON.parse(await file.text())
+    } catch {
+      alert('ファイルの読み込みに失敗しました。正しいバックアップファイル(JSON)を選択してください。')
+      return
+    }
+    if (!Array.isArray(data.vehicles)) {
+      alert('バックアップファイルの形式が正しくありません。')
+      return
+    }
+    if (
+      !confirm(
+        '現在この端末に保存されているデータはすべて削除され、バックアップの内容で置き換えられます。よろしいですか？',
+      )
+    ) {
+      return
+    }
+
+    setImporting(true)
+    try {
+      await db.transaction(
+        'rw',
+        [db.vehicles, db.bikeLogRecords, db.fuelRecords, db.deadlines, db.customCategories],
+        async () => {
+          await Promise.all([
+            db.vehicles.clear(),
+            db.bikeLogRecords.clear(),
+            db.fuelRecords.clear(),
+            db.deadlines.clear(),
+            db.customCategories.clear(),
+          ])
+          await Promise.all([
+            db.vehicles.bulkAdd(data.vehicles as never[]),
+            db.bikeLogRecords.bulkAdd((data.bikeLogRecords ?? []) as never[]),
+            db.fuelRecords.bulkAdd((data.fuelRecords ?? []) as never[]),
+            db.deadlines.bulkAdd((data.deadlines ?? []) as never[]),
+            db.customCategories.bulkAdd((data.customCategories ?? []) as never[]),
+          ])
+        },
+      )
+      alert('データを復元しました。')
+    } catch {
+      alert('復元中にエラーが発生しました。ファイルが破損している可能性があります。')
+    } finally {
+      setImporting(false)
+    }
   }
 
   return (
@@ -126,6 +190,21 @@ export default function SettingsPage() {
         <button onClick={handleExport} className="btn-secondary w-full">
           データをエクスポート (JSON)
         </button>
+        <button
+          type="button"
+          onClick={() => importInputRef.current?.click()}
+          disabled={importing}
+          className="btn-secondary w-full mt-2"
+        >
+          {importing ? '復元中...' : 'バックアップから復元 (JSON)'}
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
       </div>
     </div>
   )
