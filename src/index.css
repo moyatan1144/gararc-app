@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
+/* システム設定ではなく.darkクラスの有無でダークモードを切り替える
+   (設定画面から手動でライト/ダーク/システムを選べるようにするため)。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light dark;
+  /* 屋外でも読みやすいよう、補助テキスト(text-slate-500)のコントラストを底上げする。
+     ライトモードでは既定より濃く、ダークモードでは既定より明るくする。 */
+  --color-slate-500: #475569;
+}
+
+.dark {
+  --color-slate-500: #cbd5e1;
 }
 
 html {
@@ -16,10 +27,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #020617;
-  }
+.dark body {
+  background: #020617;
 }
 
 /* 印刷時はダークモード設定に関わらず白背景・黒文字に固定する */

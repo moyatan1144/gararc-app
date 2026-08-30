@@ -1,4 +1,4 @@
-import type { Vehicle } from '../types'
+import { vehicleTypeIcon, type Vehicle } from '../types'
 import type { CurrentBikeLogSpec } from '../bikeLog'
 import { buildSharePageUrl } from './shareLink'
 
@@ -17,7 +17,7 @@ function canUseShareLink(): boolean {
 export function buildShareText(vehicle: Vehicle, specs: CurrentBikeLogSpec[]): string {
   const specLine = [vehicle.manufacturer, vehicle.model].filter(Boolean).join(' ')
   const lines = [
-    `🏍️ ${vehicle.name}`,
+    `${vehicleTypeIcon(vehicle.vehicleType)} ${vehicle.name}`,
     [
       specLine || null,
       vehicle.displacementCc ? `${vehicle.displacementCc}cc` : null,

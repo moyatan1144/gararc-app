@@ -1,6 +1,25 @@
+export type VehicleType = 'motorcycle' | 'car'
+
+export const VEHICLE_TYPE_ICON: Record<VehicleType, string> = {
+  motorcycle: '🏍️',
+  car: '🚗',
+}
+
+export const VEHICLE_TYPE_LABEL: Record<VehicleType, string> = {
+  motorcycle: 'バイク',
+  car: '車',
+}
+
+// 既存データにはvehicleTypeが無い(このアプリはもともとバイク専用だった)ため、
+// 未設定は「バイク」として扱う。
+export function vehicleTypeIcon(vehicleType: VehicleType | undefined): string {
+  return VEHICLE_TYPE_ICON[vehicleType ?? 'motorcycle']
+}
+
 export interface Vehicle {
   id: string
   name: string
+  vehicleType?: VehicleType
   model?: string
   manufacturer?: string
   displacementCc?: number
@@ -24,7 +43,7 @@ export interface FuelRecord {
   odometer: number
   tripDistance?: number
   liters: number
-  pricePerLiter: number
+  pricePerLiter?: number
   isFull: boolean
   memo?: string
   createdAt: string

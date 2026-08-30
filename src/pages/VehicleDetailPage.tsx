@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
@@ -10,7 +10,7 @@ import {
   type CurrentBikeLogSpec,
 } from '../bikeLog'
 import { computeDeadlineReminders, formatDeadlineTitle, isUrgent } from '../reminders'
-import { CUSTOM_TAGS } from '../types'
+import { CUSTOM_TAGS, vehicleTypeIcon } from '../types'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
 import BackHeader from '../components/BackHeader'
@@ -22,11 +22,14 @@ const TABS: Tab[] = ['bikelog', 'fuel', 'deadline']
 
 type FilterChip = 'scheduled' | 'unscheduled' | `tag:${string}`
 
-const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
+const SCHEDULE_FILTER_CHIPS: { key: FilterChip; label: string }[] = [
   { key: 'scheduled', label: '期限あり' },
   { key: 'unscheduled', label: '期限なし' },
-  ...CUSTOM_TAGS.map((tag) => ({ key: `tag:${tag}` as FilterChip, label: `#${tag}` })),
 ]
+const TAG_FILTER_CHIPS: { key: FilterChip; label: string }[] = CUSTOM_TAGS.map((tag) => ({
+  key: `tag:${tag}` as FilterChip,
+  label: `#${tag}`,
+}))
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,6 +40,8 @@ export default function VehicleDetailPage() {
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [showManualShare, setShowManualShare] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [openMenuCategory, setOpenMenuCategory] = useState<string | null>(null)
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<string | null>(null)
   const [imageBusy, setImageBusy] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [imageCopied, setImageCopied] = useState(false)
@@ -56,6 +61,39 @@ export default function VehicleDetailPage() {
       }
       return next
     })
+  }
+
+  function renderFilterChip(chip: { key: FilterChip; label: string }) {
+    const active = activeFilters.has(chip.key)
+    return (
+      <button
+        key={chip.key}
+        type="button"
+        onClick={() => toggleFilter(chip.key)}
+        className={`rounded-full px-3 py-1 text-xs border ${
+          active
+            ? 'bg-sky-600 border-sky-600 text-white font-medium'
+            : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+        }`}
+      >
+        {chip.label}
+      </button>
+    )
+  }
+
+  // メニュー外をタップしたら「…」メニューを閉じる
+  useEffect(() => {
+    if (!openMenuCategory) return
+    function handleOutsideClick() {
+      setOpenMenuCategory(null)
+    }
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [openMenuCategory])
+
+  async function handleDeleteLatestBikeLog(recordId: string) {
+    await db.bikeLogRecords.delete(recordId)
+    setConfirmDeleteCategory(null)
   }
 
   const vehicle = useLiveQuery(() => (id ? db.vehicles.get(id) : undefined), [id])
@@ -133,7 +171,7 @@ export default function VehicleDetailPage() {
       const file = await renderNodeToImageFile(cardRef.current, `${vehicle.name}.png`)
       const result = await shareImageFile(file, {
         title: `${vehicle.name}の仕様`,
-        text: `🏍️ ${vehicle.name}の現在の仕様`,
+        text: `${vehicleTypeIcon(vehicle.vehicleType)} ${vehicle.name}の現在の仕様`,
       })
       if (result === 'copied' || result === 'preview') {
         setImageCopied(result === 'copied')
@@ -148,6 +186,8 @@ export default function VehicleDetailPage() {
 
   function renderBikeLogRow(spec: CurrentBikeLogSpec) {
     const isOpen = expandedCategory === spec.category
+    const isMenuOpen = openMenuCategory === spec.category
+    const isConfirmingDelete = confirmDeleteCategory === spec.category
     const categoryRecords = bikeLogRecords?.filter((r) => r.category === spec.category) ?? []
     const history = isOpen ? buildBikeLogHistory(categoryRecords) : []
     const reminder = reminderByCategory.get(spec.category)
@@ -194,27 +234,85 @@ export default function VehicleDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-2 flex-wrap">
-          <Link
-            to={`/vehicles/${id}/bikelog/new?category=${encodeURIComponent(spec.category)}`}
-            className="text-sky-600 text-sm font-medium"
-          >
-            ＋更新
-          </Link>
-          <Link
-            to={`/vehicles/${id}/bikelog/${spec.latestRecord.id}/edit`}
-            className="text-sky-600 text-sm"
-          >
-            編集
-          </Link>
-          <button
-            type="button"
-            onClick={() => setExpandedCategory(isOpen ? null : spec.category)}
-            className="text-sky-600 text-sm"
-          >
-            {isOpen ? '閉じる' : '履歴'}
-          </button>
-        </div>
+        {isConfirmingDelete ? (
+          <div className="mt-2 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 flex flex-col gap-2">
+            <p className="text-sm text-red-700 dark:text-red-300">
+              「{spec.category}」の最新記録を削除します。よろしいですか？
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleDeleteLatestBikeLog(spec.latestRecord.id)}
+                className="flex-1 rounded-lg bg-red-600 text-white text-sm font-medium py-2"
+              >
+                削除する
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteCategory(null)}
+                className="btn-secondary flex-1 py-2 text-sm"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between mt-2">
+            <Link
+              to={`/vehicles/${id}/bikelog/new?category=${encodeURIComponent(spec.category)}`}
+              className="text-sky-600 text-sm font-medium"
+            >
+              ＋更新
+            </Link>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenMenuCategory(isMenuOpen ? null : spec.category)
+                }}
+                aria-label="その他の操作"
+                className="text-slate-500 dark:text-slate-400 px-2 leading-none text-lg"
+              >
+                …
+              </button>
+              {isMenuOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1 z-10 w-36 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg py-1 flex flex-col"
+                >
+                  <Link
+                    to={`/vehicles/${id}/bikelog/${spec.latestRecord.id}/edit`}
+                    onClick={() => setOpenMenuCategory(null)}
+                    className="px-3 py-2 text-sm text-left text-slate-700 dark:text-slate-200"
+                  >
+                    編集
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpandedCategory(isOpen ? null : spec.category)
+                      setOpenMenuCategory(null)
+                    }}
+                    className="px-3 py-2 text-sm text-left text-slate-700 dark:text-slate-200"
+                  >
+                    {isOpen ? '履歴を閉じる' : '履歴'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmDeleteCategory(spec.category)
+                      setOpenMenuCategory(null)
+                    }}
+                    className="px-3 py-2 text-sm text-left text-red-600"
+                  >
+                    削除
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {isOpen && (
           <ul className="mt-2 flex flex-col gap-1 border-t border-slate-200 dark:border-slate-800 pt-2">
             {history.map((record) => (
@@ -233,6 +331,7 @@ export default function VehicleDetailPage() {
 
   const profileCardData = {
     name: vehicle.name,
+    icon: vehicleTypeIcon(vehicle.vehicleType),
     manufacturer: vehicle.manufacturer,
     model: vehicle.model,
     displacementCc: vehicle.displacementCc,
@@ -276,7 +375,7 @@ export default function VehicleDetailPage() {
         </div>
       )}
 
-      <BackHeader title={vehicle.name} to="/" />
+      <BackHeader title={`${vehicleTypeIcon(vehicle.vehicleType)} ${vehicle.name}`} to="/" />
 
       <div className="card mb-4 flex gap-3">
         {vehicle.photoDataUrl && (
@@ -362,33 +461,20 @@ export default function VehicleDetailPage() {
 
       {tab === 'bikelog' && (
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <Link to={`/vehicles/${id}/bikelog/new`} className="text-sky-600 text-sm font-medium">
+          <div className="flex justify-end mb-2">
+            <Link
+              to={`/vehicles/${id}/bikelog/new`}
+              className="rounded-full bg-sky-600 text-white px-4 py-1.5 text-sm font-medium"
+            >
               + バイクログに追加
-            </Link>
-            <Link to={`/vehicles/${id}/bikelog/categories`} className="text-sky-600 text-xs">
-              カテゴリ管理
             </Link>
           </div>
 
+          <div className="flex flex-wrap gap-2 mb-2">
+            {SCHEDULE_FILTER_CHIPS.map((chip) => renderFilterChip(chip))}
+          </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {FILTER_CHIPS.map((chip) => {
-              const active = activeFilters.has(chip.key)
-              return (
-                <button
-                  key={chip.key}
-                  type="button"
-                  onClick={() => toggleFilter(chip.key)}
-                  className={`rounded-full px-3 py-1 text-xs border ${
-                    active
-                      ? 'bg-sky-600 border-sky-600 text-white font-medium'
-                      : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              )
-            })}
+            {TAG_FILTER_CHIPS.map((chip) => renderFilterChip(chip))}
           </div>
 
           {bikeLogSpecs.length === 0 && <Empty>まだバイクログの記録がありません</Empty>}
@@ -417,8 +503,10 @@ export default function VehicleDetailPage() {
               <li key={record.id} className="card">
                 <div className="flex justify-between items-start">
                   <span className="font-medium">
-                    {record.liters.toFixed(1)} L ・ ¥
-                    {Math.round(record.liters * record.pricePerLiter).toLocaleString()}
+                    {record.liters.toFixed(1)} L ・{' '}
+                    {record.pricePerLiter !== undefined
+                      ? `¥${Math.round(record.liters * record.pricePerLiter).toLocaleString()}`
+                      : '¥-'}
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-slate-500">{record.date}</span>

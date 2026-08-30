@@ -86,7 +86,7 @@ export default function CustomCategoryManagePage() {
 
   return (
     <div className="p-4">
-      <BackHeader title="カテゴリ管理" to={backTo} />
+      <BackHeader title="カテゴリの追加・削除" to={backTo} />
 
       <form onSubmit={handleAdd} className="flex flex-col gap-2 mb-4">
         <div className="flex gap-2">

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { db } from '../db'
 import { useReminders } from '../hooks/useReminders'
 import { useNotificationPermission } from '../hooks/useNotificationPermission'
+import { useThemeMode } from '../hooks/useThemeMode'
+import type { ThemeMode } from '../lib/theme'
 import {
   getPermissionHelpText,
   isInIframe,
@@ -12,12 +14,19 @@ import {
   setNotifyEnabled,
 } from '../lib/notifications'
 
+const THEME_OPTIONS: { mode: ThemeMode; label: string }[] = [
+  { mode: 'system', label: 'システム' },
+  { mode: 'light', label: 'ライト' },
+  { mode: 'dark', label: 'ダーク' },
+]
+
 export default function SettingsPage() {
   const { urgentCount } = useReminders()
   const [enabled, setEnabled] = useState(isNotifyEnabled())
   const { permission, refresh } = useNotificationPermission()
   const supported = isNotificationApiSupported()
   const inIframe = isInIframe()
+  const { mode: themeMode, changeMode: changeThemeMode } = useThemeMode()
 
   async function handleToggle(next: boolean) {
     if (next && permission !== 'granted') {
@@ -117,6 +126,29 @@ export default function SettingsPage() {
   return (
     <div className="p-4 flex flex-col gap-4">
       <h1 className="text-xl font-bold">設定</h1>
+
+      <div className="card">
+        <div className="font-medium mb-1">表示モード</div>
+        <p className="text-sm text-slate-500 mb-3">
+          画面の明るさを選べます。「システム」は端末の設定に自動で合わせます。
+        </p>
+        <div className="flex rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 text-xs">
+          {THEME_OPTIONS.map(({ mode, label }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => changeThemeMode(mode)}
+              className={`flex-1 py-2 ${
+                themeMode === mode
+                  ? 'bg-sky-600 text-white font-medium'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="card">
         <div className="font-medium mb-1">リマインダー通知</div>

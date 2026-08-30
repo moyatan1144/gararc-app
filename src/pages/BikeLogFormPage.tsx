@@ -177,7 +177,7 @@ function BikeLogFormInner() {
                 to={`/vehicles/${vehicleId}/bikelog/categories`}
                 className="text-sky-600 text-xs mt-1 inline-block"
               >
-                カテゴリを管理
+                カテゴリの追加・削除
               </Link>
             </>
           )}

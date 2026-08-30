@@ -3,8 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, newId, nowIso } from '../db'
 import { readImageAsDataUrl } from '../lib/image'
+import { VEHICLE_TYPE_ICON, VEHICLE_TYPE_LABEL, type VehicleType } from '../types'
 import BackHeader from '../components/BackHeader'
 import ConfirmDeleteButton from '../components/ConfirmDeleteButton'
+
+const VEHICLE_TYPES: VehicleType[] = ['motorcycle', 'car']
 
 export default function VehicleFormPage() {
   const { id } = useParams()
@@ -16,6 +19,7 @@ export default function VehicleFormPage() {
   )
 
   const [name, setName] = useState('')
+  const [vehicleType, setVehicleType] = useState<VehicleType>('motorcycle')
   const [model, setModel] = useState('')
   const [manufacturer, setManufacturer] = useState('')
   const [displacementCc, setDisplacementCc] = useState('')
@@ -29,6 +33,7 @@ export default function VehicleFormPage() {
 
   if (isEdit && existing && !loaded) {
     setName(existing.name)
+    setVehicleType(existing.vehicleType ?? 'motorcycle')
     setModel(existing.model ?? '')
     setManufacturer(existing.manufacturer ?? '')
     setDisplacementCc(existing.displacementCc !== undefined ? String(existing.displacementCc) : '')
@@ -56,6 +61,7 @@ export default function VehicleFormPage() {
 
     const fields = {
       name,
+      vehicleType,
       model: model || undefined,
       manufacturer: manufacturer || undefined,
       displacementCc: displacementCc ? Number(displacementCc) : undefined,
@@ -147,6 +153,24 @@ export default function VehicleFormPage() {
               <span className="text-sm">タップして写真を選択</span>
             </label>
           )}
+        </Field>
+        <Field label="種別">
+          <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 text-sm">
+            {VEHICLE_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setVehicleType(type)}
+                className={`flex-1 py-2.5 text-center ${
+                  vehicleType === type
+                    ? 'bg-sky-600 text-white font-medium'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {VEHICLE_TYPE_ICON[type]} {VEHICLE_TYPE_LABEL[type]}
+              </button>
+            ))}
+          </div>
         </Field>
         <Field label="車両名（例: マイCB400）">
           <input

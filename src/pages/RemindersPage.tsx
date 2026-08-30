@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useReminders } from '../hooks/useReminders'
 import { formatDeadlineTitle, isUrgent, type DeadlineReminder, type Reminder } from '../reminders'
 import ReminderStat from '../components/ReminderStat'
+import { vehicleTypeIcon } from '../types'
 
 type SortMode = 'urgency' | 'vehicle'
 
@@ -29,7 +30,9 @@ export default function RemindersPage() {
 
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
   const vehicleOrder = new Map(vehicles.map((v, i) => [v.id, i]))
-  const sorted = [...reminders].sort((a, b) => {
+  // 上部の一覧は「要注意」なものだけに絞る。全件は下の「期限一覧」で見られる。
+  const urgentReminders = reminders.filter(isUrgent)
+  const sorted = [...urgentReminders].sort((a, b) => {
     if (sortMode === 'vehicle') {
       const orderDiff = (vehicleOrder.get(a.vehicleId) ?? 0) - (vehicleOrder.get(b.vehicleId) ?? 0)
       if (orderDiff !== 0) return orderDiff
@@ -68,9 +71,9 @@ export default function RemindersPage() {
 
         {sorted.length === 0 && (
           <div className="text-center text-slate-500 mt-8 text-sm">
-            バイクログに交換間隔を設定するか、車検・保険の期限を登録すると
+            期限が近づく（または過ぎている）と、ここに要注意として表示されます。
             <br />
-            ここにリマインダーが表示されます。
+            登録内容は下の「期限一覧」でいつでも確認できます。
           </div>
         )}
 
@@ -132,7 +135,9 @@ export default function RemindersPage() {
                     <span className={`text-xs text-slate-400 transition-transform ${expanded ? 'rotate-90' : ''}`}>
                       ▶
                     </span>
-                    <span className="font-medium truncate">🏍️ {vehicle.name}</span>
+                    <span className="font-medium truncate">
+                      {vehicleTypeIcon(vehicle.vehicleType)} {vehicle.name}
+                    </span>
                     <span className="text-xs text-slate-500 flex-shrink-0">
                       （{vehicleDeadlines.length}件）
                     </span>

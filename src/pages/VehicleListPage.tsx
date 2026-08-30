@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { useReminders } from '../hooks/useReminders'
+import { vehicleTypeIcon } from '../types'
 
 export default function VehicleListPage() {
   const vehicles = useLiveQuery(() => db.vehicles.orderBy('createdAt').toArray(), [])
@@ -43,7 +44,9 @@ export default function VehicleListPage() {
               to={`/vehicles/${vehicle.id}`}
               className="block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm"
             >
-              <div className="font-semibold">{vehicle.name}</div>
+              <div className="font-semibold">
+                {vehicleTypeIcon(vehicle.vehicleType)} {vehicle.name}
+              </div>
               {vehicle.model && (
                 <div className="text-sm text-slate-500">{vehicle.model}</div>
               )}

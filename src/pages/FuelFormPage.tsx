@@ -36,7 +36,7 @@ export default function FuelFormPage() {
     setOdometer(String(existing.odometer))
     setTripDistance(existing.tripDistance !== undefined ? String(existing.tripDistance) : '')
     setLiters(String(existing.liters))
-    setPricePerLiter(String(existing.pricePerLiter))
+    setPricePerLiter(existing.pricePerLiter !== undefined ? String(existing.pricePerLiter) : '')
     setIsFull(existing.isFull)
     setMemo(existing.memo ?? '')
     setLoaded(true)
@@ -64,7 +64,7 @@ export default function FuelFormPage() {
       odometer: odometerNum,
       tripDistance: meterType === 'trip' ? tripNum : undefined,
       liters: Number(liters) || 0,
-      pricePerLiter: Number(pricePerLiter) || 0,
+      pricePerLiter: pricePerLiter ? Number(pricePerLiter) : undefined,
       isFull,
       memo: memo || undefined,
     }
@@ -170,12 +170,7 @@ export default function FuelFormPage() {
             <DecimalInput required decimals={2} value={liters} onChange={setLiters} />
           </Field>
           <Field label="単価 (円/L・整数)">
-            <DecimalInput
-              required
-              decimals={0}
-              value={pricePerLiter}
-              onChange={setPricePerLiter}
-            />
+            <DecimalInput decimals={0} value={pricePerLiter} onChange={setPricePerLiter} />
           </Field>
         </div>
         {totalCost !== undefined && (

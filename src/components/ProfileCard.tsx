@@ -1,5 +1,6 @@
 export interface ProfileCardData {
   name: string
+  icon?: string
   manufacturer?: string
   model?: string
   displacementCc?: number
@@ -19,7 +20,7 @@ export default function ProfileCard({ data }: { data: ProfileCardData }) {
     <div className="w-full bg-slate-100 text-slate-900">
       <div className="bg-gradient-to-b from-sky-600 to-sky-700 text-white px-6 pt-10 pb-8 text-center">
         <div className="w-20 h-20 mx-auto rounded-full bg-white/15 flex items-center justify-center text-4xl">
-          🏍️
+          {data.icon ?? '🏍️'}
         </div>
         <h1 className="text-2xl font-bold mt-3">{data.name}</h1>
         <div className="text-sm text-sky-100 mt-1">{specLine || '車種未設定'}</div>
