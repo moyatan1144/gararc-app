@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useReminders } from '../hooks/useReminders'
-import { isUrgent, type DeadlineReminder, type Reminder } from '../reminders'
+import { formatDeadlineTitle, isUrgent, type DeadlineReminder, type Reminder } from '../reminders'
 import ReminderStat from '../components/ReminderStat'
 
 type SortMode = 'urgency' | 'vehicle'
@@ -164,7 +164,7 @@ export default function RemindersPage() {
                             >
                               <div className="flex justify-between items-center gap-2">
                                 <span className="text-sm font-medium truncate">
-                                  {d.type} ・ {d.label}
+                                  {formatDeadlineTitle(d)}
                                 </span>
                                 <ReminderStat
                                   remainingDays={reminder?.remainingDays}

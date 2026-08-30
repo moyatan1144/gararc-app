@@ -9,7 +9,7 @@ import {
   computeBikeLogReminders,
   type CurrentBikeLogSpec,
 } from '../bikeLog'
-import { computeDeadlineReminders, isUrgent } from '../reminders'
+import { computeDeadlineReminders, formatDeadlineTitle, isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
@@ -464,7 +464,7 @@ export default function VehicleDetailPage() {
                   >
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-sm font-medium truncate">
-                        {d.type} ・ {d.label}
+                        {formatDeadlineTitle(d)}
                       </span>
                       <ReminderStat
                         remainingDays={reminder?.remainingDays}
