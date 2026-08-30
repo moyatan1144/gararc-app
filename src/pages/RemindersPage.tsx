@@ -85,19 +85,14 @@ export default function RemindersPage() {
                   className={`card-compact block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
                 >
                   <div className="flex justify-between items-center gap-2">
-                    <span className="font-medium truncate">
+                    <span className="font-medium truncate min-w-0">
                       {vehicle?.name} ・ {reminderLabel(reminder)}
                     </span>
-                    {urgent && (
-                      <span className="text-red-600 text-xs font-semibold flex-shrink-0">
-                        要注意
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    className={`text-sm mt-0.5 font-medium ${urgent ? 'text-red-600' : 'text-sky-600'}`}
-                  >
-                    {describe(reminder)}
+                    <span
+                      className={`text-sm font-semibold flex-shrink-0 ${urgent ? 'text-red-600' : 'text-sky-600'}`}
+                    >
+                      {describe(reminder)}
+                    </span>
                   </div>
                 </Link>
               </li>
