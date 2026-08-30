@@ -1,16 +1,30 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useReminders } from '../hooks/useReminders'
-import { isUrgent, type Reminder } from '../reminders'
+import { isUrgent, type DeadlineReminder, type Reminder } from '../reminders'
+import { formatShortDate } from '../lib/dateUtils'
 
 type SortMode = 'urgency' | 'vehicle'
 
 export default function RemindersPage() {
   const { loading, reminders, deadlines, vehicles } = useReminders()
   const [sortMode, setSortMode] = useState<SortMode>('urgency')
+  const [expandedVehicleIds, setExpandedVehicleIds] = useState<Set<string>>(new Set())
 
   if (loading) {
     return <div className="p-4 text-slate-500">読み込み中...</div>
+  }
+
+  function toggleVehicle(vehicleId: string) {
+    setExpandedVehicleIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(vehicleId)) {
+        next.delete(vehicleId)
+      } else {
+        next.add(vehicleId)
+      }
+      return next
+    })
   }
 
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]))
@@ -22,6 +36,11 @@ export default function RemindersPage() {
     }
     return remainingValue(a) - remainingValue(b)
   })
+  const deadlineReminderById = new Map(
+    reminders
+      .filter((r): r is DeadlineReminder => r.kind === 'deadline')
+      .map((r) => [r.deadline.id, r]),
+  )
   const deadlinesByVehicleId = new Map<string, typeof deadlines>()
   for (const vehicle of vehicles) deadlinesByVehicleId.set(vehicle.id, [])
   for (const d of deadlines) {
@@ -55,20 +74,31 @@ export default function RemindersPage() {
           </div>
         )}
 
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-1.5">
           {sorted.map((reminder, i) => {
             const vehicle = vehicleById.get(reminder.vehicleId)
             const urgent = isUrgent(reminder)
             return (
               <li key={i}>
-                <Link to={reminderLink(reminder)} className={`card-compact block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}>
-                  <div className="flex justify-between">
-                    <span className="font-medium">
+                <Link
+                  to={reminderLink(reminder)}
+                  className={`card-compact block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
+                >
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="font-medium truncate">
                       {vehicle?.name} ・ {reminderLabel(reminder)}
                     </span>
-                    {urgent && <span className="text-red-600 text-xs font-semibold">要注意</span>}
+                    {urgent && (
+                      <span className="text-red-600 text-xs font-semibold flex-shrink-0">
+                        要注意
+                      </span>
+                    )}
                   </div>
-                  <div className="text-sm text-slate-500 mt-1">{describe(reminder)}</div>
+                  <div
+                    className={`text-sm mt-0.5 font-medium ${urgent ? 'text-red-600' : 'text-sky-600'}`}
+                  >
+                    {describe(reminder)}
+                  </div>
                 </Link>
               </li>
             )
@@ -85,48 +115,78 @@ export default function RemindersPage() {
           </div>
         )}
 
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-2">
           {vehicles.map((vehicle) => {
             const vehicleDeadlines = deadlinesByVehicleId.get(vehicle.id) ?? []
+            const expanded = expandedVehicleIds.has(vehicle.id)
             return (
-              <li key={vehicle.id} className="card">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">🏍️ {vehicle.name}</span>
+              <li key={vehicle.id} className="card-compact">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleVehicle(vehicle.id)}
+                    className="flex items-center gap-1.5 min-w-0 flex-1 text-left"
+                  >
+                    <span className={`text-xs text-slate-400 transition-transform ${expanded ? 'rotate-90' : ''}`}>
+                      ▶
+                    </span>
+                    <span className="font-medium truncate">🏍️ {vehicle.name}</span>
+                    <span className="text-xs text-slate-500 flex-shrink-0">
+                      （{vehicleDeadlines.length}件）
+                    </span>
+                  </button>
                   <Link
                     to={`/reminders/deadline/new?vehicleId=${vehicle.id}`}
-                    className="text-sky-600 text-sm font-medium"
+                    className="text-sky-600 text-sm font-medium flex-shrink-0"
                   >
                     + 期限を追加
                   </Link>
                 </div>
-                {vehicleDeadlines.length === 0 ? (
-                  <div className="text-sm text-slate-500">まだ期限が登録されていません</div>
-                ) : (
-                  <ul className="flex flex-col gap-2">
-                    {vehicleDeadlines.map((d) => (
-                      <li key={d.id}>
-                        <Link
-                          to={`/reminders/deadline/${d.id}/edit`}
-                          className="block rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2"
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className="text-sm font-medium">
-                              {d.type} ・ {d.label}
-                            </span>
-                            <span className="text-sm text-slate-500 flex-shrink-0">
-                              {d.dueDate}
-                            </span>
-                          </div>
-                          {d.memo && (
-                            <div className="text-sm text-slate-500 mt-1 whitespace-pre-wrap">
-                              {d.memo}
-                            </div>
-                          )}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {expanded &&
+                  (vehicleDeadlines.length === 0 ? (
+                    <div className="text-sm text-slate-500 mt-2">まだ期限が登録されていません</div>
+                  ) : (
+                    <ul className="flex flex-col gap-1.5 mt-2">
+                      {vehicleDeadlines.map((d) => {
+                        const reminder = deadlineReminderById.get(d.id)
+                        const urgent = reminder ? isUrgent(reminder) : false
+                        return (
+                          <li key={d.id}>
+                            <Link
+                              to={`/reminders/deadline/${d.id}/edit`}
+                              className={`block rounded-lg border px-2.5 py-1.5 ${
+                                urgent
+                                  ? 'border-red-300 dark:border-red-800'
+                                  : 'border-slate-200 dark:border-slate-800'
+                              }`}
+                            >
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="text-sm font-medium truncate">
+                                  {d.type} ・ {d.label}
+                                </span>
+                                <span
+                                  className={`text-sm font-medium flex-shrink-0 ${urgent ? 'text-red-600' : 'text-sky-600'}`}
+                                >
+                                  {formatShortDate(d.dueDate)}
+                                  {reminder &&
+                                    ` ・ ${
+                                      reminder.remainingDays >= 0
+                                        ? `あと${reminder.remainingDays}日`
+                                        : `${Math.abs(reminder.remainingDays)}日超過`
+                                    }`}
+                                </span>
+                              </div>
+                              {d.memo && (
+                                <div className="text-sm text-slate-500 mt-0.5 whitespace-pre-wrap">
+                                  {d.memo}
+                                </div>
+                              )}
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ))}
               </li>
             )
           })}
@@ -178,9 +238,10 @@ function remainingValue(r: Reminder): number {
 
 function describe(r: Reminder): string {
   if (r.kind === 'deadline') {
+    const dateText = formatShortDate(r.deadline.dueDate)
     return r.remainingDays >= 0
-      ? `あと${r.remainingDays}日（${r.deadline.dueDate}）`
-      : `${Math.abs(r.remainingDays)}日超過（${r.deadline.dueDate}）`
+      ? `あと${r.remainingDays}日（${dateText}）`
+      : `${Math.abs(r.remainingDays)}日超過（${dateText}）`
   }
   const parts: string[] = []
   if (r.remainingKm !== undefined) {

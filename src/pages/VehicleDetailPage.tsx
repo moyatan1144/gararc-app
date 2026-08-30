@@ -11,6 +11,7 @@ import {
 } from '../bikeLog'
 import { computeDeadlineReminders, isUrgent } from '../reminders'
 import { CUSTOM_TAGS } from '../types'
+import { formatShortDate } from '../lib/dateUtils'
 import { buildLineShareUrl, buildShareText, buildXShareUrl, shareVehicleText } from '../lib/share'
 import { renderNodeToImageFile, shareImageFile } from '../lib/shareImage'
 import BackHeader from '../components/BackHeader'
@@ -441,7 +442,7 @@ export default function VehicleDetailPage() {
       )}
 
       {tab === 'deadline' && (
-        <Section addLabel="+ 期限を追加" addTo={`/reminders/deadline/new?vehicleId=${id}`}>
+        <Section addLabel="+ 期限を追加" addTo={`/reminders/deadline/new?vehicleId=${id}&from=vehicle`}>
           {sortedDeadlines.length === 0 && <Empty>まだ期限が登録されていません</Empty>}
           <ul className="flex flex-col gap-2">
             {sortedDeadlines.map((d) => {
@@ -450,14 +451,16 @@ export default function VehicleDetailPage() {
               return (
                 <li key={d.id}>
                   <Link
-                    to={`/reminders/deadline/${d.id}/edit`}
+                    to={`/reminders/deadline/${d.id}/edit?from=vehicle`}
                     className={`card block ${urgent ? 'border-red-300 dark:border-red-800' : ''}`}
                   >
                     <div className="flex justify-between items-start">
                       <span className="font-medium">
                         {d.type} ・ {d.label}
                       </span>
-                      <span className="text-sm text-slate-500 flex-shrink-0">{d.dueDate}</span>
+                      <span className="text-sm text-slate-500 flex-shrink-0">
+                        {formatShortDate(d.dueDate)}
+                      </span>
                     </div>
                     {reminder && (
                       <div className={`text-sm mt-1 ${urgent ? 'text-red-600' : 'text-sky-600'}`}>

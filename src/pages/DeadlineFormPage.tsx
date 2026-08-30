@@ -28,10 +28,13 @@ export default function DeadlineFormPage() {
     [presetVehicleId],
   )
 
-  // 車両ページの「期限」タブから来た場合はそのタブへ、そうでなければ
-  // リマインダーへ戻る(どちらの入口からも登録できるようにしているため)。
+  // 車両ページの「期限」タブから来た場合(from=vehicle)はそのタブへ、
+  // リマインダーから来た場合はリマインダーへ戻る(どちらの入口にも
+  // vehicleIdは付くため、行き先の判定にはfromパラメータを使う)。
+  const cameFromVehiclePage = searchParams.get('from') === 'vehicle'
   const backToVehicleId = isEdit ? existing?.vehicleId : presetVehicleId
-  const backTo = backToVehicleId ? `/vehicles/${backToVehicleId}?tab=deadline` : '/reminders'
+  const backTo =
+    cameFromVehiclePage && backToVehicleId ? `/vehicles/${backToVehicleId}?tab=deadline` : '/reminders'
 
   const [vehicleId, setVehicleId] = useState(presetVehicleId ?? '')
   const [type, setType] = useState<DeadlineType>('車検')
