@@ -449,7 +449,7 @@ export default function VehicleDetailPage() {
 
       <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 mb-4 text-sm">
         <TabButton active={tab === 'bikelog'} onClick={() => setTab('bikelog')}>
-          バイクログ
+          車両ログ
         </TabButton>
         <TabButton active={tab === 'fuel'} onClick={() => setTab('fuel')}>
           給油記録
@@ -466,7 +466,7 @@ export default function VehicleDetailPage() {
               to={`/vehicles/${id}/bikelog/new`}
               className="rounded-full bg-sky-600 text-white px-4 py-1.5 text-sm font-medium"
             >
-              + バイクログに追加
+              + 車両ログに追加
             </Link>
           </div>
 
@@ -477,7 +477,7 @@ export default function VehicleDetailPage() {
             {TAG_FILTER_CHIPS.map((chip) => renderFilterChip(chip))}
           </div>
 
-          {bikeLogSpecs.length === 0 && <Empty>まだバイクログの記録がありません</Empty>}
+          {bikeLogSpecs.length === 0 && <Empty>まだ車両ログの記録がありません</Empty>}
           {bikeLogSpecs.length > 0 && filteredSpecs.length === 0 && (
             <Empty>条件に一致する記録がありません</Empty>
           )}

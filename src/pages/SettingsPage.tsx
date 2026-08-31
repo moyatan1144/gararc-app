@@ -207,7 +207,7 @@ export default function SettingsPage() {
       <div className="card">
         <div className="font-medium mb-1">車両情報の出力</div>
         <p className="text-sm text-slate-500 mb-3">
-          各車両の車両情報とバイクログを一覧にして出力します。印刷ダイアログから「PDFに保存」を選ぶと、PDFとして保存できます。
+          各車両の車両情報と車両ログを一覧にして出力します。印刷ダイアログから「PDFに保存」を選ぶと、PDFとして保存できます。
         </p>
         <Link to="/settings/export" className="btn-secondary w-full block text-center">
           車両情報を出力する

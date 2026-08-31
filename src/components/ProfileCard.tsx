@@ -70,7 +70,7 @@ export default function ProfileCard({ data }: { data: ProfileCardData }) {
           )}
         </div>
 
-        <p className="text-xs text-slate-500 text-center mt-4 pb-2">🏍️ バイク管理アプリで作成</p>
+        <p className="text-xs text-slate-500 text-center mt-4 pb-2">🏍️ ガレージアーカイブで作成</p>
       </div>
     </div>
   )

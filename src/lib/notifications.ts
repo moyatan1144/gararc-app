@@ -100,7 +100,7 @@ export async function maybeShowReminderNotification(urgentCount: number): Promis
   if (hasNotifiedToday()) return
 
   const registration = await navigator.serviceWorker.ready
-  await registration.showNotification('バイク管理', {
+  await registration.showNotification('ガレージアーカイブ', {
     body: `要注意のリマインダーが${urgentCount}件あります`,
     tag: 'bike-app-reminder',
   })

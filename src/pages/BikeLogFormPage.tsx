@@ -146,7 +146,7 @@ function BikeLogFormInner() {
     <div className="p-4">
       <BackHeader
         title={
-          isEdit ? 'バイクログを編集' : presetCategory ? `${presetCategory}を更新` : 'バイクログに追加'
+          isEdit ? '車両ログを編集' : presetCategory ? `${presetCategory}を更新` : '車両ログに追加'
         }
         to={backTo}
       />

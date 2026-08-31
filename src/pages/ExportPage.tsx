@@ -98,7 +98,7 @@ export default function ExportPage() {
               )}
 
               <div className="text-sm">
-                <div className="font-medium mb-1">バイクログ</div>
+                <div className="font-medium mb-1">車両ログ</div>
                 {specs.length === 0 ? (
                   <div className="text-slate-500">記録なし</div>
                 ) : (

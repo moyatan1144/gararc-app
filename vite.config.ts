@@ -14,9 +14,9 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'バイク管理',
-        short_name: 'バイク管理',
-        description: 'バイクの整備・給油・車検/保険を記録するアプリ',
+        name: 'ガレージアーカイブ',
+        short_name: 'ガレアカ',
+        description: '愛車の整備・給油・車検/保険を記録するアプリ',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',

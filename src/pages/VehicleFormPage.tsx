@@ -257,7 +257,7 @@ export default function VehicleFormPage() {
             placeholder="例: 保管場所、任意保険の連絡先、気になる症状など自由にメモ"
           />
           <span className="text-xs text-slate-500">
-            このメモは共有ページには含まれません。マフラーやミラーなどのカスタム内容は「バイクログ」タブで記録できます。
+            このメモは共有ページには含まれません。マフラーやミラーなどのカスタム内容は「車両ログ」タブで記録できます。
           </span>
         </Field>
 
